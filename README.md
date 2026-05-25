@@ -6,19 +6,43 @@ ambiguity before any code is written — confirm scope, close open questions,
 and produce a reliable, reviewed plan — then execute that plan faithfully,
 confirm acceptance criteria, strip the ephemeral planning docs, and open a PR.
 
-Status: pre-implementation. The design is approved; the build is driven by the
-implementation plan.
+Status: active — v0.1.0. Installable and dogfooded.
 
-## Where things are
+## Layout
 
-- Design spec —
-  `docs/superpowers/specs/2026-05-24-quark-dual-engine-harness-design.md`
-- Implementation plan —
-  `docs/superpowers/plans/2026-05-24-quark-dual-engine-harness.md`
+- `playbook/` — the six step instructions plus `_shared.md` (the product).
+- `shims/` — per-engine command templates (`claude.md`, `codex.md`).
+- `src/lib.mjs`, `bin/quark-install` — the zero-dependency installer.
+- `templates/` — `.work/<TICKET>/` artifact skeletons.
+- `test/` — `node:test` suites.
 
-## Building it
+## Requirements
 
-This repo is built by executing the implementation plan task-by-task. Start a
-Claude Code session in this directory and use the superpowers executing-plans
-or subagent-driven-development skill to work through the plan. See `CLAUDE.md`
-for orientation.
+- Node.js ≥ 18.
+- The `claude` (Claude Code) and/or `codex` (OpenAI Codex) CLIs for whichever
+  engines you drive. Cross-engine review degrades gracefully to a labeled
+  self-review when the other CLI is absent.
+
+## Install
+
+```bash
+node bin/quark-install        # writes commands for both engines
+node bin/quark-install --claude   # only Claude Code
+node bin/quark-install --codex    # only Codex
+node bin/quark-install --dry-run  # preview, write nothing
+```
+
+Run it from a repo you want to work in: it also adds `.work/` to that repo's
+`.gitignore` and symlinks `AGENTS.md` to `CLAUDE.md` so Codex shares your
+steering doc.
+
+## The loop
+
+Per ticket, in either engine: `/quark-frame <ticket>` → `/quark-plan` →
+(`/quark-review`) → `/quark-build` → `/quark-verify` → `/quark-ship`. Planning
+artifacts live in `.work/<TICKET>/` and are stripped before the PR. Switch
+engines any time — `state.md` is the handoff.
+
+## Development
+
+Run `node --test` for the full suite. Zero runtime dependencies. MIT licensed.

@@ -1,0 +1,18 @@
+{
+  "name": "quark",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A dual-engine (Claude Code + Codex) issue-level dev harness.",
+  "type": "module",
+  "bin": {
+    "quark-install": "bin/quark-install"
+  },
+  "scripts": {
+    "test": "node --test",
+    "install:local": "node bin/quark-install"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

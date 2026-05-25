@@ -14,3 +14,6 @@ npm-debug.log*
 
 # Quark ephemeral per-ticket working dirs (when dogfooding the harness here)
 .work/
+
+# Superpowers planning scaffold — ephemeral specs/plans, kept local only
+docs/superpowers/

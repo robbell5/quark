@@ -1,6 +1,7 @@
 # CLAUDE.md — Quark
 
 This file orients a fresh Claude Code (or Codex) session working in this repo.
+`AGENTS.md` is a symlink to this file, so both engines read identical guidance.
 
 ## What this repo is
 
@@ -12,35 +13,52 @@ and produce a reliable, reviewed plan before any code is written.
 
 ## Status
 
-Pre-implementation. The design is approved and complete; this repo is built by
-executing the implementation plan. No harness code exists yet.
+Active — v0.1.0. The harness is built, tested (`node --test`, 21 passing), and
+installable via `bin/quark-install`. The product is the Markdown in `playbook/`;
+the installer is plumbing.
 
-## Source of truth
+## Layout
 
-- Design spec — what to build and why, including the framework-evaluation
-  decision record:
-  `docs/superpowers/specs/2026-05-24-quark-dual-engine-harness-design.md`
-- Implementation plan — how, task-by-task:
-  `docs/superpowers/plans/2026-05-24-quark-dual-engine-harness.md`
+- `playbook/` — the product. `_shared.md` (artifact schema, `state.md` format,
+  principles, reviewer invocations) plus the six step files: `frame.md`,
+  `plan.md`, `review.md`, `build.md`, `verify.md`, `ship.md`.
+- `shims/claude.md`, `shims/codex.md` — per-engine command templates with
+  `{{QUARK_ROOT}}` / `{{STEP}}` placeholders. Engine identity (who reviews
+  whom) is baked into each template.
+- `src/lib.mjs` — pure installer logic: `STEPS`, `resolveQuarkRoot`,
+  `renderShim`, `installEngine`, `ensureGitignoreEntry`, `engineTargets`,
+  `parseArgs`, `ensureAgentsSymlink`.
+- `bin/quark-install` — the CLI entry that wires `src/lib.mjs` to argv.
+- `templates/` — `.work/<TICKET>/` skeletons (`context.md`, `plan.md`,
+  `state.md`, `uat.md`).
+- `test/` — `node:test` suites: `lib`, `content` (structural), `e2e`, `smoke`.
 
-Read the spec first, then the plan. The spec is authoritative; if the plan and
-spec disagree, reconcile before proceeding.
+The original design spec and implementation plan are kept locally under
+`docs/superpowers/` (gitignored) as historical reference. They are no longer the
+source of truth — the playbooks and code are.
 
-## How to build it
+## How to work in it
 
-Work through the implementation plan task-by-task using the superpowers
-`executing-plans` or `subagent-driven-development` skill. For each task: follow
-test-driven development where the plan calls for it, keep commits small and
-focused, and run the relevant gates before marking a task done. Do not skip the
-plan's verification steps, and do not invent scope beyond the spec.
+- Run the suite with `node --test`. There are zero runtime dependencies (Node
+  built-ins only); keep it that way — it is the deliberate anti-supply-chain
+  stance.
+- The six step names in `STEPS` (`src/lib.mjs`) are the single source of truth
+  for the loop. To add or rename a step, change `STEPS`, add the matching
+  `playbook/<step>.md`, and reinstall so the per-engine command files
+  regenerate.
+- Editing an existing `playbook/*.md` needs no reinstall — generated shims
+  point at the playbook by absolute path. Only adding or renaming commands
+  requires re-running `node bin/quark-install`.
+- Follow test-driven development for logic changes; keep commits small and
+  focused, and run `node --test` before marking work done.
 
 ## Conventions
 
-- Markdown must pass markdownlint. There is no config here, so the strict
-  80-character default applies — keep prose lines wrapped and avoid wide tables
-  in long-form docs.
-- This is a Node/TypeScript CLI project intended for later npm distribution.
-  The published package name is deferred: npm `quark` is taken, so scope it as
-  `@<scope>/quark` or use an available name such as `quarkflow`. The CLI binary
-  and slash-command prefix stay `quark` / `/quark-*` regardless.
+- Markdown must pass markdownlint. `.markdownlint.json` disables hard line
+  length (MD013), but wrap prose at ~80 columns to match the existing style.
+- This is a Node (ESM) JavaScript CLI (`.mjs`), zero runtime dependencies, no
+  build step. It is intended for later npm distribution: the package is
+  `private` for now, and the published name is deferred (npm `quark` is taken —
+  scope as `@<scope>/quark` or use an available name such as `quarkflow`). The
+  CLI binary and slash-command prefix stay `quark` / `/quark-*` regardless.
 - Commits: clear and professional; no AI-attribution footers.

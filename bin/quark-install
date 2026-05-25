@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+import fs from "node:fs";
+import path from "node:path";
+import {
+  STEPS,
+  resolveQuarkRoot,
+  installEngine,
+  ensureGitignoreEntry,
+  ensureAgentsSymlink,
+  parseArgs,
+  engineTargets,
+} from "../src/lib.mjs";
+
+const opts = parseArgs(process.argv.slice(2));
+const root = resolveQuarkRoot(import.meta.url);
+const targets = engineTargets();
+
+console.log(`Quark install — root: ${root}`);
+for (const engine of opts.engines) {
+  const { template, outDir } = targets[engine];
+  const templateText = fs.readFileSync(path.join(root, template), "utf8");
+  if (opts.dryRun) {
+    console.log(`[dry-run] ${engine}: would write ${STEPS.length} commands ` +
+      `to ${outDir}`);
+    continue;
+  }
+  const written = installEngine({ template: templateText, outDir, root });
+  console.log(`${engine}: wrote ${written.length} commands to ${outDir}`);
+}
+
+if (!opts.dryRun) {
+  const cwd = process.cwd();
+  if (ensureGitignoreEntry(cwd, ".work/")) {
+    console.log(`Added .work/ to ${path.join(cwd, ".gitignore")}`);
+  }
+  const agents = ensureAgentsSymlink(cwd);
+  console.log(`AGENTS.md: ${agents}`);
+}
