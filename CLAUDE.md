@@ -13,7 +13,7 @@ and produce a reliable, reviewed plan before any code is written.
 
 ## Status
 
-Active — v0.1.0. The harness is built, tested (`node --test`, 21 passing), and
+Active — v0.2.0. The harness is built, tested (`node --test`, 21 passing), and
 installable via `bin/quark-install`. The product is the Markdown in `playbook/`;
 the installer is plumbing.
 
@@ -21,13 +21,15 @@ the installer is plumbing.
 
 - `playbook/` — the product. `_shared.md` (artifact schema, `state.md` format,
   principles, reviewer invocations) plus the six step files: `frame.md`,
-  `plan.md`, `review.md`, `build.md`, `verify.md`, `ship.md`.
-- `shims/claude.md`, `shims/codex.md` — per-engine command templates with
-  `{{QUARK_ROOT}}` / `{{STEP}}` placeholders. Engine identity (who reviews
-  whom) is baked into each template.
-- `src/lib.mjs` — pure installer logic: `STEPS`, `resolveQuarkRoot`,
-  `renderShim`, `installEngine`, `ensureGitignoreEntry`, `engineTargets`,
-  `parseArgs`, `ensureAgentsSymlink`.
+  `plan.md`, `review.md`, `build.md`, `verify.md`, `ship.md`. Plus `config.md`,
+  the `/quark-config` utility playbook.
+- `shims/claude.md`, `shims/codex.md` — per-engine loop command templates with
+  `{{QUARK_ROOT}}` / `{{STEP}}` placeholders; engine identity (who reviews whom)
+  is baked in. `shims/claude-config.md`, `shims/codex-config.md` are the
+  reviewer-free templates for the `config` utility.
+- `src/lib.mjs` — pure installer logic: `STEPS`, `UTILITIES`,
+  `resolveQuarkRoot`, `renderShim`, `installEngine`, `engineTargets`,
+  `parseArgs`.
 - `bin/quark-install` — the CLI entry that wires `src/lib.mjs` to argv.
 - `templates/` — `.work/<TICKET>/` skeletons (`context.md`, `plan.md`,
   `state.md`, `uat.md`).
@@ -46,6 +48,9 @@ source of truth — the playbooks and code are.
   for the loop. To add or rename a step, change `STEPS`, add the matching
   `playbook/<step>.md`, and reinstall so the per-engine command files
   regenerate.
+- Non-loop utility commands live in `UTILITIES` (currently just `config`),
+  generated from the reviewer-free `shims/<engine>-config.md` templates. Add one
+  the same way: extend `UTILITIES`, add `playbook/<name>.md`, and reinstall.
 - Editing an existing `playbook/*.md` needs no reinstall — generated shims
   point at the playbook by absolute path. Only adding or renaming commands
   requires re-running `node bin/quark-install`.

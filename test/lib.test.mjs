@@ -5,11 +5,11 @@ import os from "node:os";
 import path from "node:path";
 import {
   STEPS,
+  UTILITIES,
   renderShim,
   installEngine,
-  ensureGitignoreEntry,
-  ensureAgentsSymlink,
   parseArgs,
+  engineTargets,
 } from "../src/lib.mjs";
 
 test("STEPS is the canonical six-step loop in order", () => {
@@ -21,6 +21,10 @@ test("STEPS is the canonical six-step loop in order", () => {
     "verify",
     "ship",
   ]);
+});
+
+test("UTILITIES is the non-loop command list", () => {
+  assert.deepEqual(UTILITIES, ["config"]);
 });
 
 test("renderShim substitutes QUARK_ROOT and STEP", () => {
@@ -82,55 +86,20 @@ test("installEngine is idempotent", () => {
   assert.equal(files.length, STEPS.length);
 });
 
-test("ensureGitignoreEntry appends the entry once", () => {
-  const repo = tmp();
-  const gi = path.join(repo, ".gitignore");
-  fs.writeFileSync(gi, "node_modules/\n");
-  assert.equal(ensureGitignoreEntry(repo, ".work/"), true);
-  assert.equal(ensureGitignoreEntry(repo, ".work/"), false);
-  const lines = fs
-    .readFileSync(gi, "utf8")
-    .split("\n")
-    .filter((l) => l.trim() === ".work/");
-  assert.equal(lines.length, 1);
-});
-
-test("ensureGitignoreEntry creates .gitignore if absent", () => {
-  const repo = tmp();
-  assert.equal(ensureGitignoreEntry(repo, ".work/"), true);
-  assert.ok(fs.readFileSync(path.join(repo, ".gitignore"), "utf8")
-    .includes(".work/"));
-});
-
-test("ensureAgentsSymlink links AGENTS.md to CLAUDE.md when absent", () => {
-  const repo = tmp();
-  fs.writeFileSync(path.join(repo, "CLAUDE.md"), "# steering\n");
-  assert.equal(ensureAgentsSymlink(repo), "linked");
-  const link = path.join(repo, "AGENTS.md");
-  assert.equal(fs.readlinkSync(link), "CLAUDE.md");
-});
-
-test("ensureAgentsSymlink does not clobber an existing real AGENTS.md", () => {
-  const repo = tmp();
-  fs.writeFileSync(path.join(repo, "CLAUDE.md"), "# steering\n");
-  fs.writeFileSync(path.join(repo, "AGENTS.md"), "# existing\n");
-  assert.equal(ensureAgentsSymlink(repo), "skipped-exists");
+test("installEngine renders an explicit list of command names", () => {
+  const outDir = path.join(tmp(), "commands");
+  const written = installEngine({
+    template: "x={{STEP}}",
+    outDir,
+    root: "/x",
+    steps: ["config"],
+    prefix: "quark-",
+  });
+  assert.equal(written.length, 1);
   assert.equal(
-    fs.readFileSync(path.join(repo, "AGENTS.md"), "utf8"),
-    "# existing\n",
+    fs.readFileSync(path.join(outDir, "quark-config.md"), "utf8"),
+    "x=config",
   );
-});
-
-test("ensureAgentsSymlink skips when CLAUDE.md is missing", () => {
-  const repo = tmp();
-  assert.equal(ensureAgentsSymlink(repo), "skipped-no-claude");
-});
-
-test("ensureAgentsSymlink returns already-linked on a second call", () => {
-  const repo = tmp();
-  fs.writeFileSync(path.join(repo, "CLAUDE.md"), "# steering\n");
-  assert.equal(ensureAgentsSymlink(repo), "linked");
-  assert.equal(ensureAgentsSymlink(repo), "already-linked");
 });
 
 test("parseArgs defaults to both engines", () => {
@@ -143,4 +112,14 @@ test("parseArgs honors --claude, --codex, --dry-run", () => {
   assert.deepEqual(parseArgs(["--claude"]).engines, ["claude"]);
   assert.deepEqual(parseArgs(["--codex"]).engines, ["codex"]);
   assert.equal(parseArgs(["--dry-run"]).dryRun, true);
+});
+
+test("engineTargets exposes loop and config templates per engine", () => {
+  const t = engineTargets("/home/x");
+  assert.equal(t.claude.loopTemplate, "shims/claude.md");
+  assert.equal(t.claude.configTemplate, "shims/claude-config.md");
+  assert.equal(t.codex.loopTemplate, "shims/codex.md");
+  assert.equal(t.codex.configTemplate, "shims/codex-config.md");
+  assert.ok(t.claude.outDir.endsWith(path.join(".claude", "commands")));
+  assert.ok(t.codex.outDir.endsWith(path.join(".codex", "prompts")));
 });

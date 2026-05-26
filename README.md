@@ -6,12 +6,14 @@ ambiguity before any code is written — confirm scope, close open questions,
 and produce a reliable, reviewed plan — then execute that plan faithfully,
 confirm acceptance criteria, strip the ephemeral planning docs, and open a PR.
 
-Status: active — v0.1.0. Installable and dogfooded.
+Status: active — v0.2.0. Installable and dogfooded.
 
 ## Layout
 
-- `playbook/` — the six step instructions plus `_shared.md` (the product).
-- `shims/` — per-engine command templates (`claude.md`, `codex.md`).
+- `playbook/` — the six loop steps plus `config.md` and `_shared.md` (the
+  product).
+- `shims/` — per-engine command templates: loop (`claude.md`, `codex.md`) and
+  config (`claude-config.md`, `codex-config.md`).
 - `src/lib.mjs`, `bin/quark-install` — the zero-dependency installer.
 - `templates/` — `.work/<TICKET>/` artifact skeletons.
 - `test/` — `node:test` suites.
@@ -32,9 +34,15 @@ node bin/quark-install --codex    # only Codex
 node bin/quark-install --dry-run  # preview, write nothing
 ```
 
-Run it from a repo you want to work in: it also adds `.work/` to that repo's
-`.gitignore` and symlinks `AGENTS.md` to `CLAUDE.md` so Codex shares your
-steering doc.
+This only writes command files into each engine's command directory; it does
+not touch any project.
+
+## Configure a repo
+
+Inside a repo you want to use Quark in, run `/quark-config`. It checks the
+repo's setup and, with your consent, fixes it: ensures `.work/` is gitignored,
+aliases `CLAUDE.md` and `AGENTS.md` so both engines read identical guidance, and
+scaffolds a steering doc if neither exists. Safe to re-run.
 
 ## The loop
 
