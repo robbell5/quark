@@ -1,0 +1,51 @@
+#!/usr/bin/env node
+import {
+  STEPS,
+  UTILITIES,
+  resolveQuarkRoot,
+  parseArgs,
+  engineTargets,
+  install,
+  uninstall,
+} from "../src/lib.mjs";
+
+const opts = parseArgs(process.argv.slice(2));
+const root = resolveQuarkRoot(import.meta.url);
+const total = STEPS.length + UTILITIES.length;
+
+if (opts.command === "uninstall") {
+  if (opts.dryRun) {
+    const targets = engineTargets();
+    for (const engine of opts.engines) {
+      console.log(
+        `[dry-run] ${engine}: would remove quark commands from ${targets[engine].outDir}`,
+      );
+    }
+  } else {
+    for (const { engine, outDir, count } of uninstall({ engines: opts.engines })) {
+      console.log(`${engine}: removed ${count} commands from ${outDir}`);
+    }
+  }
+} else if (opts.command === "install") {
+  if (opts.dryRun) {
+    const targets = engineTargets();
+    for (const engine of opts.engines) {
+      console.log(
+        `[dry-run] ${engine}: would write ${total} commands to ${targets[engine].outDir}`,
+      );
+    }
+  } else {
+    console.log(`Quark install — root: ${root}`);
+    for (const { engine, outDir, count } of install({ engines: opts.engines, root })) {
+      console.log(`${engine}: wrote ${count} commands to ${outDir}`);
+    }
+    console.log(
+      "Next: run /quark-config inside any repo you want to use Quark in.",
+    );
+  }
+} else {
+  console.error(
+    `Unknown command: ${opts.command}. Use "install" or "uninstall".`,
+  );
+  process.exit(1);
+}

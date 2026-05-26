@@ -1,15 +1,25 @@
 {
   "name": "quark",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "A dual-engine (Claude Code + Codex) issue-level dev harness.",
+  "files": [
+    "bin/",
+    "src/",
+    "playbook/",
+    "templates/",
+    "shims/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "type": "module",
   "bin": {
-    "quark-install": "bin/quark-install"
+    "quark": "bin/quark"
   },
   "scripts": {
     "test": "node --test",
-    "install:local": "node bin/quark-install"
+    "install:local": "node bin/quark install"
   },
   "engines": {
     "node": ">=18"

@@ -5,6 +5,29 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.3.0] - 2026-05-26
+
+### Changed
+
+- The installer now writes **self-contained** command files: each `/quark-*`
+  command embeds the shared conventions, the step body, and any referenced
+  templates, instead of pointing at an absolute clone path. This enables
+  `npx github:robbell5/quark install` with no clone and nothing left on disk
+  beyond the command files. `composeCommand` replaces `renderShim`.
+- The CLI binary is now `bin/quark` with `install` (default) and `uninstall`
+  subcommands. `--claude` / `--codex` / `--dry-run` are unchanged.
+
+### Added
+
+- `uninstall` — removes the `quark-*` command files Quark owns from both engine
+  directories.
+- `files` allowlist in `package.json`, readying a future npm publish.
+
+### Removed
+
+- `renderShim` and the `{{QUARK_ROOT}}` placeholder — commands no longer
+  reference any external path.
+
 ## [0.2.0] - 2026-05-26
 
 ### Changed
@@ -51,5 +74,6 @@ Initial release: the dual-engine issue-level harness.
 
 [kac]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0.html
+[0.3.0]: https://github.com/robbell5/quark/releases/tag/v0.3.0
 [0.2.0]: https://github.com/robbell5/quark/releases/tag/v0.2.0
 [0.1.0]: https://github.com/robbell5/quark/releases/tag/v0.1.0

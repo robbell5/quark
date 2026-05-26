@@ -6,7 +6,7 @@ ambiguity before any code is written — confirm scope, close open questions,
 and produce a reliable, reviewed plan — then execute that plan faithfully,
 confirm acceptance criteria, strip the ephemeral planning docs, and open a PR.
 
-Status: active — v0.2.0. Installable and dogfooded.
+Status: active — v0.3.0. Installable and dogfooded.
 
 ## Layout
 
@@ -14,7 +14,7 @@ Status: active — v0.2.0. Installable and dogfooded.
   product).
 - `shims/` — per-engine command templates: loop (`claude.md`, `codex.md`) and
   config (`claude-config.md`, `codex-config.md`).
-- `src/lib.mjs`, `bin/quark-install` — the zero-dependency installer.
+- `src/lib.mjs`, `bin/quark` — the zero-dependency installer.
 - `templates/` — `.work/<TICKET>/` artifact skeletons.
 - `test/` — `node:test` suites.
 
@@ -28,14 +28,35 @@ Status: active — v0.2.0. Installable and dogfooded.
 ## Install
 
 ```bash
-node bin/quark-install        # writes commands for both engines
-node bin/quark-install --claude   # only Claude Code
-node bin/quark-install --codex    # only Codex
-node bin/quark-install --dry-run  # preview, write nothing
+npx github:robbell5/quark install            # commands for both engines
+npx github:robbell5/quark install --claude   # only Claude Code
+npx github:robbell5/quark install --codex    # only Codex
+npx github:robbell5/quark install --dry-run  # preview, write nothing
 ```
 
-This only writes command files into each engine's command directory; it does
-not touch any project.
+This writes self-contained command files into each engine's command directory
+(`~/.claude/commands`, `~/.codex/prompts`). Nothing else is placed on disk and
+no project is touched. To remove them later:
+
+```bash
+npx github:robbell5/quark uninstall
+```
+
+Pin a version with a git ref, e.g. `npx github:robbell5/quark#v0.3.0 install`.
+From a local clone the same commands are `node bin/quark install` /
+`node bin/quark uninstall`.
+
+## Publishing to npm (later)
+
+Quark installs straight from GitHub today. Publishing to npm later needs no code
+changes — only packaging metadata:
+
+1. Remove `"private": true` from `package.json`.
+2. Set `"name"` to an available scoped name, e.g. `@robbell5/quark`.
+3. `npm publish --access public`.
+
+The `files` allowlist already scopes the published tarball. Once published,
+`npx @robbell5/quark install` works exactly like the GitHub form.
 
 ## Configure a repo
 
@@ -54,3 +75,7 @@ engines any time — `state.md` is the handoff.
 ## Development
 
 Run `node --test` for the full suite. Zero runtime dependencies. MIT licensed.
+
+Editing any `playbook/*.md`, `templates/*.md`, or shim requires re-running the
+installer (`node bin/quark install`) to regenerate the self-contained command
+files.

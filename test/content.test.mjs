@@ -18,17 +18,13 @@ test("a playbook file exists for every step, plus _shared", () => {
   }
 });
 
-test("each shim template has both placeholders and references", () => {
+test("each loop shim is a header with STEP + ARGUMENTS and no clone path", () => {
   for (const engine of ["claude", "codex"]) {
     const tpl = read(`shims/${engine}.md`);
-    assert.ok(tpl.includes("{{QUARK_ROOT}}"), `${engine}: no QUARK_ROOT`);
     assert.ok(tpl.includes("{{STEP}}"), `${engine}: no STEP`);
-    assert.ok(tpl.includes("_shared.md"), `${engine}: no _shared ref`);
-    assert.ok(
-      tpl.includes("playbook/{{STEP}}.md"),
-      `${engine}: no step playbook ref`,
-    );
     assert.ok(tpl.includes("$ARGUMENTS"), `${engine}: no argument token`);
+    assert.ok(!tpl.includes("{{QUARK_ROOT}}"), `${engine}: clone path leaked`);
+    assert.ok(!tpl.includes("playbook/"), `${engine}: stale playbook pointer`);
   }
 });
 
@@ -57,16 +53,16 @@ test("_shared.md documents both reviewer invocations and the fallback", () => {
   assert.ok(/fallback/i.test(shared));
 });
 
-test("config templates: placeholders, playbook ref, args, reviewer-free", () => {
+test("config shims are reviewer-free headers with STEP + ARGUMENTS", () => {
   for (const engine of ["claude", "codex"]) {
     const tpl = read(`shims/${engine}-config.md`);
-    assert.ok(tpl.includes("{{QUARK_ROOT}}"), `${engine}-config: no QUARK_ROOT`);
     assert.ok(tpl.includes("{{STEP}}"), `${engine}-config: no STEP`);
-    assert.ok(
-      tpl.includes("playbook/{{STEP}}.md"),
-      `${engine}-config: no step playbook ref`,
-    );
     assert.ok(tpl.includes("$ARGUMENTS"), `${engine}-config: no argument token`);
+    assert.ok(
+      !tpl.includes("{{QUARK_ROOT}}"),
+      `${engine}-config: clone path leaked`,
+    );
+    assert.ok(!tpl.includes("playbook/"), `${engine}-config: stale pointer`);
   }
   assert.ok(
     !/Codex/.test(read("shims/claude-config.md")),
@@ -90,4 +86,11 @@ test("claude-config shim has frontmatter with description and no argument-hint",
 
 test("the config utility has a playbook", () => {
   assert.ok(fs.existsSync(path.join(root, "playbook/config.md")));
+});
+
+test("config.md does not reference _shared.md (it is not inlined there)", () => {
+  assert.ok(
+    !read("playbook/config.md").includes("_shared.md"),
+    "config command does not bundle _shared.md, so it must not name it",
+  );
 });

@@ -9,7 +9,7 @@ never clobber a divergent file; safe to re-run.** Inspect everything, propose
 changes, and apply only what the developer approves.
 
 1. **Gitignore ephemerals.** Quark's per-ticket artifacts live in an ephemeral
-   working directory, `.work/` (the canonical ephemeral path; see `_shared.md`).
+   working directory, `.work/` (Quark's canonical ephemeral working directory).
    Confirm `.work/` is gitignored in this repo. If it is not, propose adding
    `.work/` to `.gitignore` and apply on consent. This is the proactive
    counterpart to the defensive leak-check in `ship.md`.

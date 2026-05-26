@@ -8,8 +8,5 @@ argument-hint: "<ticket-id-or-description>"
 You are running the Quark `{{STEP}}` step in **Claude Code**.
 
 - Your engine: Claude Code. The review engine is **Codex**, invoked via the
-  `codex` CLI as described in `{{QUARK_ROOT}}/playbook/_shared.md`.
-- Read and follow these files, in order:
-  1. `{{QUARK_ROOT}}/playbook/_shared.md`
-  2. `{{QUARK_ROOT}}/playbook/{{STEP}}.md`
+  `codex` CLI as described in the Shared Conventions below.
 - Ticket / input: $ARGUMENTS
