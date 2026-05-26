@@ -77,3 +77,5 @@ source of truth — the playbooks and code are.
   CLI binary stays `quark`; skills are invoked `/quark-*` (Claude Code) and
   `$quark-*` (Codex).
 - Commits: clear and professional; no AI-attribution footers.
+- Integrate finished feature branches into `main` with a **squash merge** (one
+  commit per feature), then delete the branch.
