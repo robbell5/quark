@@ -1,5 +1,7 @@
 ---
+name: quark-{{STEP}}
 description: "Quark config — check/fix this repo's setup for Quark (Claude Code)"
+disable-model-invocation: true
 ---
 
 # Quark config — Claude Code

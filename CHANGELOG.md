@@ -5,6 +5,33 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.4.0] - 2026-05-26
+
+### Changed
+
+- **Install model → Agent Skills on both engines.** Quark now installs a
+  self-contained skill *directory* per command into each engine's skill root —
+  `~/.claude/skills/quark-*/SKILL.md` (Claude Code) and
+  `~/.agents/skills/quark-*/SKILL.md` (Codex) — replacing the v0.3.0 flat
+  command files in `~/.claude/commands` and `~/.codex/prompts`. Invoke with
+  `/quark-*` (Claude) or `$quark-*` (Codex). This follows the official guidance
+  that custom commands/prompts are superseded by skills.
+- All seven skills are **explicit-invocation only**: Claude headers carry
+  `disable-model-invocation: true`; Codex skills carry an `agents/openai.yaml`
+  sidecar with `policy.allow_implicit_invocation: false`.
+- Codex headers gain the required `SKILL.md` frontmatter (`name`,
+  `description`) they lacked as prompts, and reference the invocation text
+  instead of `$ARGUMENTS` (Codex does not substitute it).
+- `install` and `uninstall` now sweep leftover v0.3.0 flat command files from
+  `~/.claude/commands` / `~/.codex/prompts`, so a stale command can't shadow the
+  new skill.
+
+### Added
+
+- `shims/codex-openai.yaml` — the Codex explicit-only sidecar, copied verbatim
+  into every Codex skill dir.
+- `sweepLegacy` in `src/lib.mjs` — removes the v0.3.0 flat command files.
+
 ## [0.3.0] - 2026-05-26
 
 ### Changed
@@ -74,6 +101,7 @@ Initial release: the dual-engine issue-level harness.
 
 [kac]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0.html
+[0.4.0]: https://github.com/robbell5/quark/releases/tag/v0.4.0
 [0.3.0]: https://github.com/robbell5/quark/releases/tag/v0.3.0
 [0.2.0]: https://github.com/robbell5/quark/releases/tag/v0.2.0
 [0.1.0]: https://github.com/robbell5/quark/releases/tag/v0.1.0

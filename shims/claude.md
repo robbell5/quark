@@ -1,6 +1,8 @@
 ---
+name: quark-{{STEP}}
 description: "Quark {{STEP}} step (Claude Code driver; Codex reviews)"
 argument-hint: "<ticket-id-or-description>"
+disable-model-invocation: true
 ---
 
 # Quark {{STEP}} — Claude Code

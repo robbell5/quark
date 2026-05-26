@@ -18,12 +18,18 @@ if (opts.command === "uninstall") {
     const targets = engineTargets();
     for (const engine of opts.engines) {
       console.log(
-        `[dry-run] ${engine}: would remove quark commands from ${targets[engine].outDir}`,
+        `[dry-run] ${engine}: would remove quark skills from ${targets[engine].outDir}` +
+          ` and sweep legacy v0.3.0 files from ${targets[engine].legacyDir}`,
       );
     }
   } else {
-    for (const { engine, outDir, count } of uninstall({ engines: opts.engines })) {
-      console.log(`${engine}: removed ${count} commands from ${outDir}`);
+    for (const { engine, outDir, count, legacyRemoved } of uninstall({
+      engines: opts.engines,
+    })) {
+      console.log(`${engine}: removed ${count} skills from ${outDir}`);
+      if (legacyRemoved) {
+        console.log(`${engine}: swept ${legacyRemoved} legacy v0.3.0 files`);
+      }
     }
   }
 } else if (opts.command === "install") {
@@ -31,16 +37,23 @@ if (opts.command === "uninstall") {
     const targets = engineTargets();
     for (const engine of opts.engines) {
       console.log(
-        `[dry-run] ${engine}: would write ${total} commands to ${targets[engine].outDir}`,
+        `[dry-run] ${engine}: would write ${total} skills to ${targets[engine].outDir}` +
+          ` and sweep legacy v0.3.0 files from ${targets[engine].legacyDir}`,
       );
     }
   } else {
     console.log(`Quark install — root: ${root}`);
-    for (const { engine, outDir, count } of install({ engines: opts.engines, root })) {
-      console.log(`${engine}: wrote ${count} commands to ${outDir}`);
+    for (const { engine, outDir, count, legacyRemoved } of install({
+      engines: opts.engines,
+      root,
+    })) {
+      console.log(`${engine}: wrote ${count} skills to ${outDir}`);
+      if (legacyRemoved) {
+        console.log(`${engine}: swept ${legacyRemoved} legacy v0.3.0 files`);
+      }
     }
     console.log(
-      "Next: run /quark-config inside any repo you want to use Quark in.",
+      "Next: run /quark-config (Claude Code) or $quark-config (Codex) inside any repo you want to use Quark in.",
     );
   }
 } else {

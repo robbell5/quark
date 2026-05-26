@@ -18,14 +18,18 @@ test("a playbook file exists for every step, plus _shared", () => {
   }
 });
 
-test("each loop shim is a header with STEP + ARGUMENTS and no clone path", () => {
+test("loop shims carry STEP and no clone path; only Claude uses $ARGUMENTS", () => {
   for (const engine of ["claude", "codex"]) {
     const tpl = read(`shims/${engine}.md`);
     assert.ok(tpl.includes("{{STEP}}"), `${engine}: no STEP`);
-    assert.ok(tpl.includes("$ARGUMENTS"), `${engine}: no argument token`);
     assert.ok(!tpl.includes("{{QUARK_ROOT}}"), `${engine}: clone path leaked`);
     assert.ok(!tpl.includes("playbook/"), `${engine}: stale playbook pointer`);
   }
+  assert.ok(read("shims/claude.md").includes("$ARGUMENTS"), "claude keeps $ARGUMENTS");
+  assert.ok(
+    !read("shims/codex.md").includes("$ARGUMENTS"),
+    "codex skills don't substitute $ARGUMENTS",
+  );
 });
 
 test("claude shim names Codex reviewer; codex shim names Claude", () => {
@@ -33,17 +37,28 @@ test("claude shim names Codex reviewer; codex shim names Claude", () => {
   assert.ok(/Claude Code/.test(read("shims/codex.md")));
 });
 
-test("claude shim carries YAML frontmatter (description, argument-hint)", () => {
+test("claude loop frontmatter: name, description, argument-hint, explicit-only", () => {
   const tpl = read("shims/claude.md");
   assert.ok(tpl.startsWith("---"), "claude: frontmatter must open at the top");
+  assert.ok(tpl.includes("name: quark-{{STEP}}"), "claude: no templated name");
+  assert.ok(tpl.includes("description:"), "claude: no description");
+  assert.ok(tpl.includes("argument-hint:"), "claude: no argument-hint");
   assert.ok(
-    tpl.includes("description:"),
-    "claude: no description in frontmatter",
+    tpl.includes("disable-model-invocation: true"),
+    "claude: not explicit-only",
   );
+});
+
+test("codex loop frontmatter is minimal: name + description, no Claude-only fields", () => {
+  const tpl = read("shims/codex.md");
+  assert.ok(tpl.startsWith("---"), "codex: frontmatter must open at the top");
+  assert.ok(tpl.includes("name: quark-{{STEP}}"), "codex: no templated name");
+  assert.ok(tpl.includes("description:"), "codex: no description");
   assert.ok(
-    tpl.includes("argument-hint:"),
-    "claude: no argument-hint in frontmatter",
+    !tpl.includes("disable-model-invocation"),
+    "codex: must not carry the Claude-only field",
   );
+  assert.ok(!tpl.includes("argument-hint:"), "codex: no argument-hint");
 });
 
 test("_shared.md documents both reviewer invocations and the fallback", () => {
@@ -53,17 +68,21 @@ test("_shared.md documents both reviewer invocations and the fallback", () => {
   assert.ok(/fallback/i.test(shared));
 });
 
-test("config shims are reviewer-free headers with STEP + ARGUMENTS", () => {
+test("config shims: STEP, no clone path, reviewer-free; only Claude uses $ARGUMENTS", () => {
   for (const engine of ["claude", "codex"]) {
     const tpl = read(`shims/${engine}-config.md`);
     assert.ok(tpl.includes("{{STEP}}"), `${engine}-config: no STEP`);
-    assert.ok(tpl.includes("$ARGUMENTS"), `${engine}-config: no argument token`);
-    assert.ok(
-      !tpl.includes("{{QUARK_ROOT}}"),
-      `${engine}-config: clone path leaked`,
-    );
+    assert.ok(!tpl.includes("{{QUARK_ROOT}}"), `${engine}-config: clone path leaked`);
     assert.ok(!tpl.includes("playbook/"), `${engine}-config: stale pointer`);
   }
+  assert.ok(
+    read("shims/claude-config.md").includes("$ARGUMENTS"),
+    "claude-config keeps $ARGUMENTS",
+  );
+  assert.ok(
+    !read("shims/codex-config.md").includes("$ARGUMENTS"),
+    "codex-config: no $ARGUMENTS",
+  );
   assert.ok(
     !/Codex/.test(read("shims/claude-config.md")),
     "claude-config must not name the Codex reviewer",
@@ -74,13 +93,37 @@ test("config shims are reviewer-free headers with STEP + ARGUMENTS", () => {
   );
 });
 
-test("claude-config shim has frontmatter with description and no argument-hint", () => {
+test("claude-config frontmatter: name, description, explicit-only, no argument-hint", () => {
   const tpl = read("shims/claude-config.md");
   assert.ok(tpl.startsWith("---"), "claude-config: frontmatter must open at top");
+  assert.ok(tpl.includes("name: quark-{{STEP}}"), "claude-config: no templated name");
   assert.ok(tpl.includes("description:"), "claude-config: no description");
+  assert.ok(
+    tpl.includes("disable-model-invocation: true"),
+    "claude-config: not explicit-only",
+  );
   assert.ok(
     !tpl.includes("argument-hint:"),
     "claude-config: should omit argument-hint (no required arg)",
+  );
+});
+
+test("codex-config frontmatter is minimal: name + description only", () => {
+  const tpl = read("shims/codex-config.md");
+  assert.ok(tpl.startsWith("---"), "codex-config: frontmatter must open at top");
+  assert.ok(tpl.includes("name: quark-{{STEP}}"), "codex-config: no templated name");
+  assert.ok(tpl.includes("description:"), "codex-config: no description");
+  assert.ok(
+    !tpl.includes("disable-model-invocation"),
+    "codex-config: Claude-only field leaked",
+  );
+});
+
+test("codex sidecar declares explicit-only invocation", () => {
+  const yaml = read("shims/codex-openai.yaml");
+  assert.ok(
+    yaml.includes("allow_implicit_invocation: false"),
+    "sidecar must disable implicit invocation",
   );
 });
 

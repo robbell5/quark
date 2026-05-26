@@ -6,14 +6,15 @@ ambiguity before any code is written — confirm scope, close open questions,
 and produce a reliable, reviewed plan — then execute that plan faithfully,
 confirm acceptance criteria, strip the ephemeral planning docs, and open a PR.
 
-Status: active — v0.3.0. Installable and dogfooded.
+Status: active — v0.4.0. Installable and dogfooded.
 
 ## Layout
 
 - `playbook/` — the six loop steps plus `config.md` and `_shared.md` (the
   product).
-- `shims/` — per-engine command templates: loop (`claude.md`, `codex.md`) and
-  config (`claude-config.md`, `codex-config.md`).
+- `shims/` — per-engine `SKILL.md` headers: loop (`claude.md`, `codex.md`) and
+  config (`claude-config.md`, `codex-config.md`), plus `codex-openai.yaml` (the
+  Codex explicit-only sidecar).
 - `src/lib.mjs`, `bin/quark` — the zero-dependency installer.
 - `templates/` — `.work/<TICKET>/` artifact skeletons.
 - `test/` — `node:test` suites.
@@ -34,15 +35,19 @@ npx github:robbell5/quark install --codex    # only Codex
 npx github:robbell5/quark install --dry-run  # preview, write nothing
 ```
 
-This writes self-contained command files into each engine's command directory
-(`~/.claude/commands`, `~/.codex/prompts`). Nothing else is placed on disk and
-no project is touched. To remove them later:
+This writes a self-contained skill directory per command into each engine's
+skill root: `~/.claude/skills/quark-*/SKILL.md` (Claude Code) and
+`~/.agents/skills/quark-*/SKILL.md` (Codex, which also gets an
+`agents/openai.yaml` sidecar). All seven skills are explicit-only — you invoke
+them; the model never auto-fires them. Install (and uninstall) also sweep any
+leftover v0.3.0 command files from `~/.claude/commands` / `~/.codex/prompts`, so
+the old flat commands can't shadow the new skills. To remove them later:
 
 ```bash
 npx github:robbell5/quark uninstall
 ```
 
-Pin a version with a git ref, e.g. `npx github:robbell5/quark#v0.3.0 install`.
+Pin a version with a git ref, e.g. `npx github:robbell5/quark#v0.4.0 install`.
 From a local clone the same commands are `node bin/quark install` /
 `node bin/quark uninstall`.
 
@@ -60,22 +65,24 @@ The `files` allowlist already scopes the published tarball. Once published,
 
 ## Configure a repo
 
-Inside a repo you want to use Quark in, run `/quark-config`. It checks the
+Inside a repo you want to use Quark in, run `/quark-config` (Claude Code) or
+`$quark-config` (Codex). It checks the
 repo's setup and, with your consent, fixes it: ensures `.work/` is gitignored,
 aliases `CLAUDE.md` and `AGENTS.md` so both engines read identical guidance, and
 scaffolds a steering doc if neither exists. Safe to re-run.
 
 ## The loop
 
-Per ticket, in either engine: `/quark-frame <ticket>` → `/quark-plan` →
-(`/quark-review`) → `/quark-build` → `/quark-verify` → `/quark-ship`. Planning
-artifacts live in `.work/<TICKET>/` and are stripped before the PR. Switch
-engines any time — `state.md` is the handoff.
+Per ticket: `/quark-frame <ticket>` → `/quark-plan` → (`/quark-review`) →
+`/quark-build` → `/quark-verify` → `/quark-ship` on Claude Code; the same steps
+are `$quark-frame <ticket>` … `$quark-ship` on Codex. Planning artifacts live in
+`.work/<TICKET>/` and are stripped before the PR. Switch engines any time —
+`state.md` is the handoff.
 
 ## Development
 
 Run `node --test` for the full suite. Zero runtime dependencies. MIT licensed.
 
-Editing any `playbook/*.md`, `templates/*.md`, or shim requires re-running the
-installer (`node bin/quark install`) to regenerate the self-contained command
-files.
+Editing any `playbook/*.md`, `templates/*.md`, shim, or `shims/codex-openai.yaml`
+requires re-running the installer (`node bin/quark install`) to regenerate the
+self-contained skill files.
