@@ -5,6 +5,36 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.5.0] - 2026-05-27
+
+### Added
+
+- **`quark check <TICKET>` validator.** A zero-dependency structural validator
+  for the per-ticket `.work/` artifacts: `quark check <TICKET>` validates every
+  artifact present; `quark check <TICKET> --for <step>` is the readiness gate
+  for entering a step. Exit 0 pass / 1 validation failure / 2 usage error.
+  Backed by a `SCHEMAS` contract and check functions in `src/check.mjs`.
+- **Cold-start step contract.** Every loop playbook is rewritten to a uniform
+  skeleton — inputs → precondition gate (`quark check --for <step>`) →
+  procedure → output schema → self-check → handoff — so each step is a
+  self-contained function a fresh session (or the other engine) runs from
+  `.work/` alone.
+- **Worked-example artifacts** in `examples/` (filled `context.md` /
+  `plan.md` / `state.md` plus a `plan-too-vague.md` anti-example), inlined
+  into the relevant step skills as few-shot anchors.
+- `templates/review.md` and `templates/pr.md`; `templates/state.md` gains a
+  frontmatter baton. A no-drift test ties every template to its schema.
+- `/quark-config` can now, with consent, pre-authorize `quark check` in the
+  engine's permission config (Claude `permissions.allow`; Codex execpolicy
+  rule).
+
+### Changed
+
+- `composeCommand` also inlines referenced `examples/<name>.md` (parallel to
+  `templates/<name>.md`); `parseArgs` gains `ticket` + `--for <step>`.
+- Quark now expects a global install (`npm i -g github:robbell5/quark`) so
+  `quark check` is on `PATH` for the gate.
+
 ## [0.4.0] - 2026-05-26
 
 ### Changed
@@ -101,6 +131,7 @@ Initial release: the dual-engine issue-level harness.
 
 [kac]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0.html
+[0.5.0]: https://github.com/robbell5/quark/releases/tag/v0.5.0
 [0.4.0]: https://github.com/robbell5/quark/releases/tag/v0.4.0
 [0.3.0]: https://github.com/robbell5/quark/releases/tag/v0.3.0
 [0.2.0]: https://github.com/robbell5/quark/releases/tag/v0.2.0

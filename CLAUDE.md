@@ -13,7 +13,7 @@ and produce a reliable, reviewed plan before any code is written.
 
 ## Status
 
-Active — v0.4.0. The harness is built, tested (`node --test`), and installable
+Active — v0.5.0. The harness is built, tested (`node --test`), and installable
 via `npx github:robbell5/quark install` (or `node bin/quark install` from a
 clone). It installs as **Agent Skills** on both engines —
 `~/.claude/skills/quark-*/` and `~/.agents/skills/quark-*/`, explicit-invocation
@@ -37,11 +37,22 @@ only. The product is the Markdown in `playbook/`; the installer is plumbing.
 - `src/lib.mjs` — installer logic: `STEPS`, `UTILITIES`, `resolveQuarkRoot`,
   `composeCommand`, `installEngine`, `uninstallEngine`, `sweepLegacy`,
   `engineTargets`, `parseArgs`, `install`, `uninstall`.
-- `bin/quark` — the CLI entry (`install` / `uninstall`) that wires
-  `src/lib.mjs` to argv.
+- `src/check.mjs` — the `quark check` validator: `SCHEMAS` contract,
+  `parseSections`, `parseFrontmatter`, `validateArtifact`, `checkReadiness`,
+  `runCheck`.
+- `bin/quark` — the CLI entry (`install` / `uninstall` / `check`) that wires
+  `src/lib.mjs` and `src/check.mjs` to argv.
 - `templates/` — `.work/<TICKET>/` skeletons (`context.md`, `plan.md`,
-  `state.md`, `uat.md`).
+  `state.md`, `uat.md`, `review.md`, `pr.md`). `state.md` carries a
+  frontmatter baton.
+- `examples/` — filled worked-example artifacts (`context.md`, `plan.md`,
+  `state.md`, `plan-too-vague.md` anti-example), inlined into the step skills
+  as few-shot anchors.
 - `test/` — `node:test` suites: `lib`, `content` (structural), `e2e`, `smoke`.
+- Each playbook in `playbook/` follows the **cold-start skeleton**: inputs →
+  precondition gate (`quark check --for <step>`) → procedure → output schema →
+  self-check → handoff. Each step is a self-contained function a fresh session
+  (or the other engine) can run from `.work/` alone.
 
 The original design spec and implementation plan are kept locally under
 `docs/superpowers/` (gitignored) as historical reference. They are no longer the
@@ -59,10 +70,13 @@ source of truth — the playbooks and code are.
 - Non-loop utility commands live in `UTILITIES` (currently just `config`),
   generated from the reviewer-free `shims/<engine>-config.md` templates. Add one
   the same way: extend `UTILITIES`, add `playbook/<name>.md`, and reinstall.
-- Editing any `playbook/*.md`, `templates/*.md`, shim, or
+- Editing any `playbook/*.md`, `templates/*.md`, `examples/*.md`, shim, or
   `shims/codex-openai.yaml` requires re-running `node bin/quark install` to
   regenerate the self-contained skill files (they no longer point back at this
-  repo).
+  repo). `composeCommand` inlines both `templates/<name>.md` and
+  `examples/<name>.md` references found in the playbook source.
+- The `quark check` gate (run inside each step) expects the global `quark` CLI
+  on `PATH`. Install globally with `npm i -g github:robbell5/quark`.
 - Follow test-driven development for logic changes; keep commits small and
   focused, and run `node --test` before marking work done.
 

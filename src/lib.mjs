@@ -17,15 +17,15 @@ export function resolveQuarkRoot(moduleUrl) {
   return path.resolve(here, "..");
 }
 
-/** Read all `templates/*.md` from the source root into a name→content map. */
-function readTemplates(root) {
-  const dir = path.join(root, "templates");
+/** Read all `<dir>/*.md` from the source root into a name→content map. */
+function readMarkdownDir(root, dir) {
+  const d = path.join(root, dir);
   const map = {};
-  if (!fs.existsSync(dir)) return map;
-  for (const file of fs.readdirSync(dir)) {
+  if (!fs.existsSync(d)) return map;
+  for (const file of fs.readdirSync(d)) {
     if (file.endsWith(".md")) {
       map[path.basename(file, ".md")] = fs.readFileSync(
-        path.join(dir, file),
+        path.join(d, file),
         "utf8",
       );
     }
@@ -54,7 +54,8 @@ export function installEngine({
   const sharedText = includeShared
     ? fs.readFileSync(path.join(root, "playbook/_shared.md"), "utf8")
     : "";
-  const templates = readTemplates(root);
+  const templates = readMarkdownDir(root, "templates");
+  const examples = readMarkdownDir(root, "examples");
   const written = [];
   for (const name of names) {
     const stepText = fs.readFileSync(
@@ -67,6 +68,7 @@ export function installEngine({
       sharedText,
       stepText,
       templates,
+      examples,
     });
     const skillDir = path.join(outDir, `${prefix}${name}`);
     fs.mkdirSync(skillDir, { recursive: true });
@@ -102,16 +104,14 @@ export function engineTargets(home = os.homedir()) {
 }
 
 /**
- * Names of templates referenced as `templates/<name>.md` in the given text,
- * in first-seen order, limited to templates we actually have content for.
+ * Names referenced as `<dir>/<name>.md` in the given text, in first-seen order,
+ * limited to names we actually have content for. Uses matchAll, not a loop.
  */
-function referencedTemplates(stepText, templates) {
+function referenced(stepText, map, dir) {
+  const re = new RegExp(`${dir}/([\\w-]+)\\.md`, "g");
   const found = [];
-  const re = /templates\/([\w-]+)\.md/g;
-  let m;
-  while ((m = re.exec(stepText)) !== null) {
-    const name = m[1];
-    if (templates[name] && !found.includes(name)) found.push(name);
+  for (const m of stepText.matchAll(re)) {
+    if (map[m[1]] && !found.includes(m[1])) found.push(m[1]);
   }
   return found;
 }
@@ -120,12 +120,13 @@ const FENCE = "`".repeat(3);
 
 /**
  * Compose one self-contained command file. Pure: operates on strings only.
- * Order: rendered header, then shared conventions (if any), then the step body,
- * then a Templates appendix for each `templates/<name>.md` the step references.
+ * Order: rendered header, shared conventions (if any), the step body, then a
+ * Templates appendix and an Examples appendix for each `templates/<name>.md` /
+ * `examples/<name>.md` the step references (first-seen order).
  *
- * Only `{{STEP}}` is substituted (not `{{QUARK_ROOT}}`): this inlines real
- * content, not file paths. The Templates appendix is driven solely by
- * `templates/<name>.md` references in `stepText`; `sharedText` is not scanned.
+ * Only `{{STEP}}` is substituted: this inlines real content, not file paths.
+ * Appendices are driven solely by references in `stepText`; `sharedText` is
+ * not scanned.
  */
 export function composeCommand({
   header,
@@ -133,18 +134,24 @@ export function composeCommand({
   sharedText = "",
   stepText = "",
   templates = {},
+  examples = {},
 }) {
   const parts = [header.replaceAll("{{STEP}}", step).trimEnd()];
   if (sharedText) parts.push(sharedText.trim());
   parts.push(stepText.trim());
-  const refs = referencedTemplates(stepText, templates);
-  if (refs.length) {
+  const appendix = (title, dir, map) => {
+    const refs = referenced(stepText, map, dir);
+    if (!refs.length) return null;
     const blocks = refs.map(
       (name) =>
-        `### templates/${name}.md\n\n${FENCE}markdown\n${templates[name].trim()}\n${FENCE}`,
+        `### ${dir}/${name}.md\n\n${FENCE}markdown\n${map[name].trim()}\n${FENCE}`,
     );
-    parts.push(`## Templates\n\n${blocks.join("\n\n")}`);
-  }
+    return `## ${title}\n\n${blocks.join("\n\n")}`;
+  };
+  const templatesBlock = appendix("Templates", "templates", templates);
+  if (templatesBlock) parts.push(templatesBlock);
+  const examplesBlock = appendix("Examples", "examples", examples);
+  if (examplesBlock) parts.push(examplesBlock);
   return parts.join("\n\n") + "\n";
 }
 

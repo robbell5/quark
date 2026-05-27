@@ -6,7 +6,7 @@ ambiguity before any code is written — confirm scope, close open questions,
 and produce a reliable, reviewed plan — then execute that plan faithfully,
 confirm acceptance criteria, strip the ephemeral planning docs, and open a PR.
 
-Status: active — v0.4.0. Installable and dogfooded.
+Status: active — v0.5.0. Installable and dogfooded.
 
 ## Layout
 
@@ -15,8 +15,12 @@ Status: active — v0.4.0. Installable and dogfooded.
 - `shims/` — per-engine `SKILL.md` headers: loop (`claude.md`, `codex.md`) and
   config (`claude-config.md`, `codex-config.md`), plus `codex-openai.yaml` (the
   Codex explicit-only sidecar).
-- `src/lib.mjs`, `bin/quark` — the zero-dependency installer.
+- `src/lib.mjs` — the zero-dependency installer; `src/check.mjs` holds the
+  `quark check` validator (`SCHEMAS` contract + check functions).
+- `bin/quark` — the CLI entry (`install`, `uninstall`, `check` subcommands).
 - `templates/` — `.work/<TICKET>/` artifact skeletons.
+- `examples/` — filled worked-example artifacts, inlined into the step skills
+  as few-shot anchors.
 - `test/` — `node:test` suites.
 
 ## Requirements
@@ -25,6 +29,8 @@ Status: active — v0.4.0. Installable and dogfooded.
 - The `claude` (Claude Code) and/or `codex` (OpenAI Codex) CLIs for whichever
   engines you drive. Cross-engine review degrades gracefully to a labeled
   self-review when the other CLI is absent.
+- A global install (`npm i -g github:robbell5/quark`) puts `quark` on `PATH`
+  so the `quark check` precondition gate works inside each step.
 
 ## Install
 
@@ -66,10 +72,12 @@ The `files` allowlist already scopes the published tarball. Once published,
 ## Configure a repo
 
 Inside a repo you want to use Quark in, run `/quark-config` (Claude Code) or
-`$quark-config` (Codex). It checks the
-repo's setup and, with your consent, fixes it: ensures `.work/` is gitignored,
-aliases `CLAUDE.md` and `AGENTS.md` so both engines read identical guidance, and
-scaffolds a steering doc if neither exists. Safe to re-run.
+`$quark-config` (Codex). It checks the repo's setup and, with your consent,
+fixes it: ensures `.work/` is gitignored, aliases `CLAUDE.md` and `AGENTS.md`
+so both engines read identical guidance, and scaffolds a steering doc if
+neither exists. It can also (with consent) pre-authorize `quark check` in the
+engine's permission config (Claude `permissions.allow`; Codex execpolicy rule).
+Safe to re-run.
 
 ## The loop
 
@@ -77,7 +85,9 @@ Per ticket: `/quark-frame <ticket>` → `/quark-plan` → (`/quark-review`) →
 `/quark-build` → `/quark-verify` → `/quark-ship` on Claude Code; the same steps
 are `$quark-frame <ticket>` … `$quark-ship` on Codex. Planning artifacts live in
 `.work/<TICKET>/` and are stripped before the PR. Switch engines any time —
-`state.md` is the handoff.
+`state.md` is the handoff. Each step runs `quark check <ticket> --for <step>`
+as a precondition gate and `quark check <ticket>` as a self-check, so a step
+refuses to start from a malformed upstream artifact.
 
 ## Development
 

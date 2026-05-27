@@ -27,11 +27,15 @@ is no ticket.
 `state.md` is what lets either engine resume mid-ticket. Keep it current.
 
 ```markdown
-# State: <TICKET-ID>
+---
+ticket: <TICKET-ID>
+current_step: <frame|plan|review|build|verify|ship>
+status: <in-progress|blocked|done>
+driving_engine: <Claude Code | Codex>
+updated: <ISO-8601 timestamp>
+---
 
-- **Current step:** <frame|plan|review|build|verify|ship>
-- **Status:** <in-progress|blocked|done>
-- **Driving engine:** <Claude Code | Codex>
+# State: <TICKET-ID>
 
 ## Completed
 - <step> — <one-line outcome> (<commit hash if any>)
@@ -59,6 +63,28 @@ is no ticket.
   pause and reconcile with the developer before continuing.
 - **Real evidence.** Never claim a gate passed without running it and seeing the
   output.
+
+## The check gate and artifact conventions
+
+Quark ships a `quark check` CLI; install it globally so it is on `PATH`
+(`npm i -g github:robbell5/quark`). It structurally validates the
+`.work/<TICKET-ID>/` artifacts. Every step uses it twice:
+
+- **Precondition gate** — `quark check <TICKET-ID> --for <step>` answers "is the
+  work ready to enter this step?" Run it first; if it exits non-zero, STOP and
+  report rather than work from a malformed upstream artifact.
+- **Self-check** — `quark check <TICKET-ID>` answers "are the artifacts I just
+  wrote structurally valid?" Run it before declaring a step done.
+
+Two conventions keep artifacts machine-checkable:
+
+- A `<…>` placeholder means **unfilled** — replace every one before the check.
+- Write `None` (never a blank line) in a section that is genuinely empty, so an
+  intentional empty is distinct from an omission.
+
+The filled `examples/` artifacts (`context.md`, `plan.md`, `state.md`) show the
+target an agent should imitate; `examples/plan-too-vague.md` shows the failure
+mode to avoid.
 
 ## Reviewer invocations (cross-engine, read-only)
 

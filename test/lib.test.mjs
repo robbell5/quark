@@ -371,3 +371,58 @@ test("parseArgs --for with no value leaves forStep null", () => {
   assert.equal(opts.forStep, null);
   assert.equal(opts.ticket, "RAY-1");
 });
+
+test("composeCommand appends only the examples the step references", () => {
+  const out = composeCommand({
+    header: "{{STEP}}",
+    step: "plan",
+    sharedText: "S",
+    stepText: "see examples/plan.md and examples/plan-too-vague.md",
+    templates: {},
+    examples: {
+      plan: "GOOD-PLAN",
+      "plan-too-vague": "BAD-PLAN",
+      context: "CTX-EXAMPLE",
+    },
+  });
+  assert.ok(out.includes("GOOD-PLAN"));
+  assert.ok(out.includes("BAD-PLAN"));
+  assert.ok(!out.includes("CTX-EXAMPLE"), "unreferenced example not appended");
+  assert.ok(out.includes("## Examples"));
+  assert.ok(
+    out.indexOf("GOOD-PLAN") < out.indexOf("BAD-PLAN"),
+    "examples appended in first-seen order",
+  );
+});
+
+test("composeCommand keeps Templates and Examples as separate appendices", () => {
+  const out = composeCommand({
+    header: "{{STEP}}",
+    step: "frame",
+    sharedText: "S",
+    stepText: "write templates/context.md; see examples/context.md",
+    templates: { context: "CTX-TEMPLATE" },
+    examples: { context: "CTX-EXAMPLE" },
+  });
+  assert.ok(out.includes("## Templates"));
+  assert.ok(out.includes("## Examples"));
+  assert.ok(out.includes("CTX-TEMPLATE"));
+  assert.ok(out.includes("CTX-EXAMPLE"));
+  assert.ok(
+    out.indexOf("## Templates") < out.indexOf("## Examples"),
+    "Templates appendix precedes Examples",
+  );
+});
+
+test("composeCommand omits Examples when none are referenced", () => {
+  const out = composeCommand({
+    header: "{{STEP}}",
+    step: "build",
+    sharedText: "S",
+    stepText: "no example refs here",
+    templates: {},
+    examples: { plan: "GOOD-PLAN" },
+  });
+  assert.ok(!out.includes("## Examples"));
+  assert.ok(!out.includes("GOOD-PLAN"));
+});

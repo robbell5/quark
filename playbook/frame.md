@@ -1,26 +1,50 @@
 # Step: frame
 
-Goal: turn a ticket into a clear, scoped `context.md` and **close ambiguity
-before planning**.
+Goal: turn a ticket into a clear, scoped `context.md` and close ambiguity
+before planning.
 
-1. Determine `<TICKET-ID>`. If a tracker id was given, fetch the ticket:
-   prefer the Linear MCP if available, else `gh issue view <id>`; if neither is
-   available, ask the developer to paste the ticket text. If there is no
-   ticket, derive a short kebab `<TICKET-ID>` from the description.
+## Inputs (read only these)
+
+- The ticket: a tracker id (prefer the Linear MCP if available, else
+  `gh issue view <id>`), or the description you were invoked with. If neither
+  is available, ask the developer to paste the ticket text.
+- The steering doc (`CLAUDE.md` / `AGENTS.md`) and the actual code the ticket
+  touches — open the real files, modules, and patterns. Do not guess.
+
+## Precondition
+
+None — `frame` is the entry step.
+
+## Procedure
+
+1. Determine `<TICKET-ID>`: the tracker id (e.g. `RAY-123`), or a short kebab
+   slug derived from the description if there is no ticket.
 2. Create `.work/<TICKET-ID>/` if it does not exist.
-3. Read the steering doc (`CLAUDE.md` / `AGENTS.md`) and the actual code the
-   ticket touches — find the real files, modules, and patterns involved. Do not
-   guess; open the files.
-4. Write `.work/<TICKET-ID>/context.md` from `templates/context.md`, filling:
-   intent, acceptance criteria, the specific files/modules in play, known
-   constraints, risks, and explicit out-of-scope items.
-5. **Confirm scope** with the developer in one or two sentences: what this
-   ticket does and does not include.
-6. **Surface open questions and gaps** as a list in `context.md`, and resolve
-   them with the developer now. Unresolved blocking questions stop progress —
-   do not move on to `plan` until they are answered.
-7. Initialize `.work/<TICKET-ID>/state.md` from `templates/state.md` with
-   current step `frame`, status `done` (or `blocked` if questions remain),
-   next action `plan`.
+3. Read the steering doc and the code in play before writing anything.
+4. Write `.work/<TICKET-ID>/context.md` from `templates/context.md`, filling
+   intent, acceptance criteria, the specific files/modules in play, constraints,
+   risks, and explicit out-of-scope items. Write `None` in any genuinely empty
+   section; never leave one blank.
+5. Confirm scope with the developer in one or two sentences — what this ticket
+   does and does not include.
+6. List open questions in `context.md` and resolve them with the developer now.
+   Unresolved blocking questions STOP progress: do not advance to `plan`.
 
-Output: `context.md` with no unresolved blocking questions; `state.md` started.
+## Output
+
+- `.work/<TICKET-ID>/context.md` conforming to `templates/context.md`, with the
+  `## Open questions` checkboxes all resolved. See `examples/context.md`.
+- `.work/<TICKET-ID>/state.md` initialized from `templates/state.md` (see
+  `examples/state.md`): `current_step: frame`, status `done` (or `blocked` if
+  questions remain).
+
+## Self-check
+
+Run `quark check <TICKET-ID>` and confirm `context.md` reports OK; once the open
+questions are resolved, `quark check <TICKET-ID> --for plan` should also pass.
+Do not declare `frame` done until it does.
+
+## Handoff
+
+Update `.work/<TICKET-ID>/state.md`: current step `frame`, status `done` (or
+`blocked`), next action `plan`, and any gotchas for the next runner.

@@ -165,3 +165,37 @@ test("every template structurally matches its schema (no drift)", () => {
     }
   }
 });
+
+test("every loop playbook follows the cold-start skeleton", () => {
+  for (const step of STEPS) {
+    const body = read(`playbook/${step}.md`);
+    for (const marker of ["## Inputs", "## Output", "## Self-check", "## Handoff"]) {
+      assert.ok(body.includes(marker), `playbook/${step}.md missing "${marker}"`);
+    }
+    assert.ok(
+      body.includes("quark check"),
+      `playbook/${step}.md must call quark check`,
+    );
+  }
+});
+
+test("frame references the context and state examples; plan references the plan examples", () => {
+  const frame = read("playbook/frame.md");
+  assert.ok(frame.includes("examples/context.md"));
+  assert.ok(frame.includes("examples/state.md"));
+  const plan = read("playbook/plan.md");
+  assert.ok(plan.includes("examples/plan.md"));
+  assert.ok(plan.includes("examples/plan-too-vague.md"));
+});
+
+test("config.md documents the consented quark check permission grant", () => {
+  const cfg = read("playbook/config.md");
+  assert.ok(cfg.includes("Bash(quark check:*)"), "Claude allow-rule");
+  assert.ok(
+    cfg.includes("prefix_rule") && cfg.includes('"quark", "check"'),
+    "Codex execpolicy rule",
+  );
+  assert.ok(cfg.includes(".claude/settings.local.json"), "Claude target file");
+  assert.ok(cfg.includes(".codex/rules"), "Codex target file");
+  assert.ok(/never clobber/i.test(cfg) && /consent/i.test(cfg), "consent framing");
+});

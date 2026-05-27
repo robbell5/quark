@@ -27,7 +27,19 @@ changes, and apply only what the developer approves.
    to create a minimal steering doc — a short description of the repo and how to
    work in it — so the `frame` step has a real file to read, then alias it per
    step 2.
-4. **Report.** Summarize what was already correct, what changed (with consent),
+4. **Pre-authorize the check command (optional, consented).** Quark's steps run
+   `quark check` at each gate; pre-authorizing the one command removes a per-run
+   approval prompt (otherwise developers tend to approve-all, a worse posture).
+   Propose a narrow allow-rule for *this* engine, explain it, apply only on
+   consent, never clobber an existing rule, and skip if it is already present:
+   - **Claude Code:** add `Bash(quark check:*)` to the `permissions.allow` array
+     in the repo's gitignored `.claude/settings.local.json` (create the file if
+     absent; offer global `~/.claude/settings.json` as an alternative).
+   - **Codex:** append an execpolicy rule to `~/.codex/rules/default.rules`:
+     `prefix_rule(pattern = ["quark", "check"], decision = "allow", justification = "Quark read-only verification check")`. Note this runs the command outside
+     the sandbox; it is read-only, so that is acceptable.
+   Re-running this step is a no-op when the rule is already present.
+5. **Report.** Summarize what was already correct, what changed (with consent),
    and anything still needing a developer decision.
 
 Output: a short report covering gitignore, steering-doc aliasing, and any
