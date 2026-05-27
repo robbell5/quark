@@ -3,6 +3,10 @@
 Goal: turn a ticket into a clear, scoped `context.md` and close ambiguity
 before planning.
 
+**Stance:** Linear (the tracker) is canonical; you are producing a *derived*
+working context for this pass, not a new source of truth. Assume the ticket
+underspecifies — close ambiguity before any planning.
+
 ## Inputs (read only these)
 
 - The ticket: a tracker id (prefer the Linear MCP if available, else
@@ -27,8 +31,20 @@ None — `frame` is the entry step.
    section; never leave one blank.
 5. Confirm scope with the developer in one or two sentences — what this ticket
    does and does not include.
-6. List open questions in `context.md` and resolve them with the developer now.
-   Unresolved blocking questions STOP progress: do not advance to `plan`.
+6. List open questions in `context.md`, following the **Eliciting decisions**
+   guide in the Shared Conventions: ask only what the code and tracker cannot
+   answer, batch them, and propose a default for each. See
+   `examples/open-questions.md`. Resolve blocking questions with the developer
+   now; unresolved blocking questions STOP progress — do not advance to `plan`.
+
+## Failure modes
+
+- Inventing requirements not traceable to the ticket → every acceptance
+  criterion maps to ticket text or an explicit developer answer.
+- Asking what you could read → reserve open questions for genuine judgment
+  calls; determine the rest from the code (see Eliciting decisions).
+- Silent scope creep → fill `## Out of scope` deliberately, not as an
+  afterthought.
 
 ## Output
 

@@ -69,11 +69,27 @@ doing the step's own work:
 3. Re-read this step's named Inputs every time; never rely on remembered
    content.
 
+## Eliciting decisions (frame and plan)
+
+When you need the developer, spend their attention only where judgment is
+required:
+
+- Ask only what the code and the tracker cannot answer. If you can determine it
+  by reading the repo, determine it — don't ask.
+- Batch the open questions; don't drip them one at a time.
+- For each, propose a default (your recommendation), so the developer confirms
+  or redirects rather than authoring from scratch.
+- Genuinely blocking questions stop progress; everything else gets a proposed
+  default and proceeds.
+
 ## Principles (apply in every step)
 
 - **One step per session.** Each step is a cold start; when one finishes, the
   next runs in a fresh session — the closing handoff tells the developer to
   start one.
+- **Think before you write.** Orient and reason first — name the change surface
+  and the unknowns — before producing an artifact. Don't emit a draft you'll
+  have to re-derive.
 - **Ambiguity is closed before code.** Confirm scope and resolve open questions
   before planning; do not start `build` until the plan is solid.
 - **Ephemeral docs.** `.work/` is scratch; it is gitignored and stripped/

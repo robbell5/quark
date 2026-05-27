@@ -2,6 +2,10 @@
 
 Goal: prove the slice meets its acceptance criteria with real evidence.
 
+**Stance:** Prove it with real evidence; an assertion that something passed is
+not evidence. You did not write this work, so you have no reason to grade it
+leniently.
+
 ## Inputs (read only these)
 
 - `.work/<TICKET-ID>/plan.md` (the definition-of-done) and
@@ -16,7 +20,8 @@ report — `plan.md` must be valid and `state.md` must show `build` complete.
 ## Procedure
 
 1. Read the definition-of-done in `plan.md` and the acceptance criteria in
-   `context.md`.
+   `context.md`, and **map each acceptance criterion** to a concrete check (a
+   gate, a test, or a UAT step) before running anything.
 2. Run the repo's gates, reading the exact commands from the steering doc.
    Record the actual output. If a gate fails, return to `build`; do not proceed.
 3. Write/refresh `.work/<TICKET-ID>/uat.md` from `templates/uat.md`: a short
@@ -28,6 +33,14 @@ report — `plan.md` must be valid and `state.md` must show `build` complete.
    safety) and record findings.
 5. Confirm every definition-of-done item is checked with evidence. Never mark
    `verify` done on assertion alone.
+
+## Failure modes
+
+- Claiming a gate passed without the output → run it; record the actual result.
+- A UAT walkthrough that doesn't map to the acceptance criteria → each step names
+  the criterion it exercises (see `examples/uat.md`).
+- Skipping the security pass on a sensitive slice → auth, money, PII, and
+  migrations always get the conditional review.
 
 ## Output
 

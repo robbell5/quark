@@ -5,6 +5,34 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.7.0] - 2026-05-27
+
+### Added
+
+- **`docs/PHILOSOPHY.md`** — the durable "why": self-owned (born from the GSD
+  rug-pull), ephemeral ticket-scoped artifacts (the tracker is the source of
+  truth — the deliberate anti-`.planning/` stance), context rot as the enemy,
+  one loop / two engines, and the prime directive to port GSD's principles, not
+  its machinery. Linked from `CLAUDE.md` / `AGENTS.md` so both engines load it
+  on cold start.
+- **`docs/PROMPT-AUTHORING.md`** — the author-facing house style every step
+  playbook follows (objective, stance, orient→reason→act, named failure modes,
+  engineered elicitation, few-shot, voice).
+- **Per-step Stance and `## Failure modes`.** Every loop step now states its
+  disposition and the 1–3 ways it characteristically drifts (symptom →
+  guardrail), generalizing the `plan-too-vague` anti-example to all six steps.
+- **Engineered elicitation.** `_shared.md` gains an "Eliciting decisions" guide
+  (ask only what needs judgment, batch, propose a default) and a "think before
+  you write" principle; `frame` and `plan` route through it.
+- **Few-shot anchors for the judgment moments** — `examples/open-questions.md`
+  (elicitation, good vs. over-asking), `examples/review.md` (triage
+  resolutions), `examples/uat.md` (acceptance-criteria-mapped walkthrough).
+
+### Changed
+
+- The six step playbooks reworked to the prompt-authoring standard; content
+  tests extended to enforce its structural elements.
+
 ## [0.6.0] - 2026-05-27
 
 ### Added
@@ -153,6 +181,8 @@ Initial release: the dual-engine issue-level harness.
 
 [kac]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0.html
+[0.7.0]: https://github.com/robbell5/quark/releases/tag/v0.7.0
+[0.6.0]: https://github.com/robbell5/quark/releases/tag/v0.6.0
 [0.5.0]: https://github.com/robbell5/quark/releases/tag/v0.5.0
 [0.4.0]: https://github.com/robbell5/quark/releases/tag/v0.4.0
 [0.3.0]: https://github.com/robbell5/quark/releases/tag/v0.3.0

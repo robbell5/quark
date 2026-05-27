@@ -2,6 +2,9 @@
 
 Goal: hand off a clean, reviewable PR with no ephemeral scaffolding in it.
 
+**Stance:** Hand off a PR a human can review quickly, with no ephemeral scratch
+in the diff. The tracker stays the source of truth; the PR points back to it.
+
 ## Inputs (read only these)
 
 - The full branch diff over its base, and `.work/<TICKET-ID>/` (for the
@@ -24,6 +27,15 @@ report — `uat.md` must show a passing result before shipping.
    outcome).
 4. Open a draft PR (`gh pr create --draft`) using `pr.md` as the body.
 5. Tell the developer it is a draft; they publish after their own review.
+
+## Failure modes
+
+- `.work/` (or other scratch) leaking into the diff → run the leak check and
+  remove anything that slipped in before opening the PR.
+- A PR body without verification evidence → summarize the gate results and the
+  UAT outcome, not just the change.
+- Publishing instead of drafting → open a draft; the developer publishes after
+  their own review.
 
 ## Output
 

@@ -3,6 +3,10 @@
 Goal: have the other engine critique the work. Run on sensitive slices (auth,
 money, ownership, data integrity); optional for trivial ones. Two modes.
 
+**Stance:** You orchestrate a read-only critique from the other engine and
+triage it honestly — fold it in, fix it in build, or reject it *with a reason*.
+A review you rubber-stamp is worse than none.
+
 ## Inputs (read only these)
 
 - `.work/<TICKET-ID>/context.md` and `.work/<TICKET-ID>/plan.md`.
@@ -28,11 +32,22 @@ report — `context.md` and `plan.md` must be valid before review.
 5. Triage every blocking/important item: fold into the plan, fix in build, or
    consciously reject with a reason. Surface blocking items to the developer.
 
+## Failure modes
+
+- Rubber-stamping — accepting the reviewer's output without triage → every
+  Blocking/Important item gets an explicit Resolution (fold / fix / reject +
+  reason). See `examples/review.md`.
+- Letting the reviewer modify the tree → use only the read-only invocation from
+  the Shared Conventions.
+- Dropping a Blocking item silently → unresolved Blocking items STOP progress and
+  are surfaced to the developer.
+
 ## Output
 
 - `.work/<TICKET-ID>/review.md` from `templates/review.md`: the reviewer's
   findings grouped by severity (Blocking / Important / Minor) with the mode and
   a timestamp, plus a `## Resolutions` entry for each blocking/important item.
+  See `examples/review.md`.
 
 ## Self-check
 

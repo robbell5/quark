@@ -3,6 +3,9 @@
 Goal: implement `plan.md` faithfully in small steps, keeping `state.md` current
 so the other engine can resume.
 
+**Stance:** Implement the plan exactly — you are not re-deciding scope. Keep
+`state.md` current enough that the other engine could resume cold from it.
+
 ## Inputs (read only these)
 
 - `.work/<TICKET-ID>/plan.md`, `.work/<TICKET-ID>/review.md` (if present),
@@ -16,7 +19,9 @@ Blocking review items resolved before building.
 
 ## Procedure
 
-1. Read `plan.md`, `review.md` (if present), and `state.md`.
+1. Read `plan.md`, `review.md` (if present), and `state.md`; identify the next
+   unit from `state.md`'s `## Next action`, and note the plan's risks and scope
+   boundary (the drift triggers) before editing any code.
 2. Work the plan one unit at a time. Where the plan calls for TDD: write the
    failing test, run it to confirm it fails, implement the minimum to pass, run
    it to confirm it passes.
@@ -28,6 +33,15 @@ Blocking review items resolved before building.
 5. STOP on drift: if the plan is wrong or scope must change, pause, update
    `context.md`/`plan.md`, and reconcile with the developer before continuing.
    Do not silently expand scope.
+
+## Failure modes
+
+- Silent scope expansion → STOP on drift: pause, update context/plan, and
+  reconcile with the developer before continuing.
+- A stale `state.md` → update it after each meaningful unit; it is the resume
+  point for the other engine.
+- An unfocused diff → only what the plan calls for; no drive-by cleanup or
+  refactoring.
 
 ## Output
 

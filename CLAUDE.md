@@ -11,9 +11,13 @@ ephemeral (stripped before the PR), and lets the developer switch primary
 engines mid-ticket without losing context. Its core goal is to remove ambiguity
 and produce a reliable, reviewed plan before any code is written.
 
+See `docs/PHILOSOPHY.md` for *why* Quark is shaped this way — read it before
+proposing structural changes — and `docs/PROMPT-AUTHORING.md` for the house
+style every step playbook follows.
+
 ## Status
 
-Active — v0.5.0. The harness is built, tested (`node --test`), and installable
+Active — v0.7.0. The harness is built, tested (`node --test`), and installable
 via `npx github:robbell5/quark install` (or `node bin/quark install` from a
 clone). It installs as **Agent Skills** on both engines —
 `~/.claude/skills/quark-*/` and `~/.agents/skills/quark-*/`, explicit-invocation
@@ -47,8 +51,8 @@ only. The product is the Markdown in `playbook/`; the installer is plumbing.
   `state.md`, `uat.md`, `review.md`, `pr.md`). `state.md` carries a
   frontmatter baton.
 - `examples/` — filled worked-example artifacts (`context.md`, `plan.md`,
-  `state.md`, `plan-too-vague.md` anti-example), inlined into the step skills
-  as few-shot anchors.
+  `state.md`, `plan-too-vague.md` anti-example, plus `open-questions.md`,
+  `review.md`, `uat.md`), inlined into the step skills as few-shot anchors.
 - `test/` — `node:test` suites: `lib`, `content` (structural), `e2e`, `smoke`.
 - Each playbook in `playbook/` follows the **cold-start skeleton**: inputs →
   precondition gate (`quark check --for <step>`) → procedure → output schema →

@@ -3,6 +3,10 @@
 Goal: produce a reliable, reviewable `plan.md` that removes ambiguity about
 *what* changes and *how* it is verified. This is the human review gate.
 
+**Stance:** A skeptical planner — a cold-start builder, possibly the other
+engine, must be able to execute this plan without re-deriving a single
+decision you skipped.
+
 ## Inputs (read only these)
 
 - `.work/<TICKET-ID>/context.md` and the code paths it names.
@@ -14,7 +18,12 @@ Run `quark check <TICKET-ID> --for plan`. If it exits non-zero, STOP and report 
 
 ## Procedure
 
-1. Read `context.md` and open the code paths it names.
+1. Read `context.md` and open the code paths it names; from them enumerate the
+   **change surface** — the exact files and functions the slice touches — and
+   list what you do *not* yet know. Settle each unknown from the code where you
+   can. A build-critical unknown the code cannot settle is a blocking question:
+   follow the **Eliciting decisions** guide in the Shared Conventions. Record
+   the rest as risks. Do not paper over an unknown.
 2. Write `.work/<TICKET-ID>/plan.md` from `templates/plan.md`:
    - a file-by-file list of changes (exact paths, what changes in each);
    - the test strategy — which behaviors get tests, and whether to use TDD
@@ -25,6 +34,16 @@ Run `quark check <TICKET-ID> --for plan`. If it exits non-zero, STOP and report 
    - risks and how the plan mitigates them.
 3. Keep the plan concrete — an engineer should execute it without re-deriving
    decisions. No "handle edge cases" hand-waving: name them.
+
+## Failure modes
+
+- Vague verbs — "handle the edge cases", "update as needed" → name the cases and
+  the changes; if you can't, you haven't planned them (see
+  `examples/plan-too-vague.md`).
+- Tests that assert implementation, not behavior → tie each test to an
+  acceptance criterion.
+- Definition-of-done items that aren't checkable → every item is something a
+  reviewer can verify true or false.
 
 ## Output
 

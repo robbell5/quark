@@ -241,3 +241,73 @@ test("config.md documents the consented quark check permission grant", () => {
   assert.ok(cfg.includes(".codex/rules"), "Codex target file");
   assert.ok(/never clobber/i.test(cfg) && /consent/i.test(cfg), "consent framing");
 });
+
+test("the philosophy and authoring docs exist", () => {
+  assert.ok(fs.existsSync(path.join(root, "docs/PHILOSOPHY.md")));
+  assert.ok(fs.existsSync(path.join(root, "docs/PROMPT-AUTHORING.md")));
+});
+
+test("CLAUDE.md links the philosophy and authoring docs", () => {
+  const md = read("CLAUDE.md");
+  assert.ok(md.includes("docs/PHILOSOPHY.md"), "must link PHILOSOPHY.md");
+  assert.ok(
+    md.includes("docs/PROMPT-AUTHORING.md"),
+    "must link PROMPT-AUTHORING.md",
+  );
+});
+
+test("_shared.md teaches think-before-you-write and how to elicit decisions", () => {
+  const shared = read("playbook/_shared.md");
+  assert.ok(/think before you write/i.test(shared), "missing reasoning principle");
+  assert.ok(/## Eliciting decisions/i.test(shared), "missing elicitation guide");
+  assert.ok(/judgment/i.test(shared), "elicitation must scope to judgment calls");
+});
+
+test("every loop step declares a Stance and a Failure modes section", () => {
+  for (const step of STEPS) {
+    const body = read(`playbook/${step}.md`);
+    assert.ok(body.includes("**Stance:**"), `playbook/${step}.md missing **Stance:**`);
+    assert.ok(
+      body.includes("## Failure modes"),
+      `playbook/${step}.md missing "## Failure modes"`,
+    );
+  }
+});
+
+test("the config utility does not carry step-only Failure modes", () => {
+  assert.ok(!read("playbook/config.md").includes("## Failure modes"));
+});
+
+test("plan and verify open their procedure with a reasoning beat", () => {
+  assert.ok(
+    /change surface/i.test(read("playbook/plan.md")),
+    "plan must enumerate the change surface before writing",
+  );
+  assert.ok(
+    /map each acceptance criterion/i.test(read("playbook/verify.md")),
+    "verify must map each acceptance criterion to a check first",
+  );
+});
+
+test("frame and plan route elicitation through the shared guide", () => {
+  assert.ok(
+    /Eliciting decisions/.test(read("playbook/frame.md")),
+    "frame must reference the Eliciting decisions guide",
+  );
+  assert.ok(
+    /Eliciting decisions/.test(read("playbook/plan.md")),
+    "plan must reference the Eliciting decisions guide",
+  );
+});
+
+test("judgment steps reference their few-shot examples, and the files exist", () => {
+  assert.ok(read("playbook/frame.md").includes("examples/open-questions.md"));
+  assert.ok(read("playbook/review.md").includes("examples/review.md"));
+  assert.ok(read("playbook/verify.md").includes("examples/uat.md"));
+  for (const ex of ["open-questions", "review", "uat"]) {
+    assert.ok(
+      fs.existsSync(path.join(root, `examples/${ex}.md`)),
+      `missing examples/${ex}.md`,
+    );
+  }
+});
