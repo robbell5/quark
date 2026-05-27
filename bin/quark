@@ -8,6 +8,7 @@ import {
   install,
   uninstall,
 } from "../src/lib.mjs";
+import { runCheck } from "../src/check.mjs";
 
 const opts = parseArgs(process.argv.slice(2));
 const root = resolveQuarkRoot(import.meta.url);
@@ -56,9 +57,13 @@ if (opts.command === "uninstall") {
       "Next: run /quark-config (Claude Code) or $quark-config (Codex) inside any repo you want to use Quark in.",
     );
   }
+} else if (opts.command === "check") {
+  const { code, lines } = runCheck({ ticket: opts.ticket, step: opts.forStep });
+  for (const line of lines) console.log(line);
+  process.exit(code);
 } else {
   console.error(
-    `Unknown command: ${opts.command}. Use "install" or "uninstall".`,
+    `Unknown command: ${opts.command}. Use "install", "uninstall", or "check".`,
   );
   process.exit(1);
 }

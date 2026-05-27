@@ -344,3 +344,30 @@ test("every installed skill's frontmatter name equals its directory", () => {
     }
   }
 });
+
+test("parseArgs reads the check ticket and --for step", () => {
+  const opts = parseArgs(["check", "RAY-001", "--for", "build"]);
+  assert.equal(opts.command, "check");
+  assert.equal(opts.ticket, "RAY-001");
+  assert.equal(opts.forStep, "build");
+});
+
+test("parseArgs check without --for leaves forStep null", () => {
+  const opts = parseArgs(["check", "RAY-001"]);
+  assert.equal(opts.command, "check");
+  assert.equal(opts.ticket, "RAY-001");
+  assert.equal(opts.forStep, null);
+});
+
+test("parseArgs still defaults command and engines unchanged", () => {
+  const opts = parseArgs([]);
+  assert.equal(opts.command, "install");
+  assert.deepEqual(opts.engines, ["claude", "codex"]);
+  assert.equal(opts.ticket, null);
+});
+
+test("parseArgs --for with no value leaves forStep null", () => {
+  const opts = parseArgs(["check", "RAY-1", "--for"]);
+  assert.equal(opts.forStep, null);
+  assert.equal(opts.ticket, "RAY-1");
+});

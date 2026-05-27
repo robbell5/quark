@@ -182,19 +182,31 @@ export function sweepLegacy({ legacyDir, names, prefix = "quark-" }) {
 }
 
 /**
- * Parse argv into { command, engines, dryRun }. The first non-flag positional
- * is the subcommand (default "install"); flags are --claude, --codex, --dry-run.
+ * Parse argv into { command, ticket, forStep, engines, dryRun }. The first
+ * non-flag positional is the subcommand (default "install"); the second is the
+ * ticket (used by `check`). Flags: --claude, --codex, --dry-run, and
+ * --for <step> (the readiness target for `check`).
  */
 export function parseArgs(argv) {
-  const positional = argv.filter((a) => !a.startsWith("--"));
+  const forIdx = argv.indexOf("--for");
+  const forStep = forIdx !== -1 ? argv[forIdx + 1] ?? null : null;
+  const skip = new Set();
+  if (forIdx !== -1) {
+    skip.add(forIdx);
+    skip.add(forIdx + 1);
+  }
+  const positional = argv.filter(
+    (a, i) => !a.startsWith("--") && !skip.has(i),
+  );
   const command = positional[0] ?? "install";
+  const ticket = positional[1] ?? null;
   const wantClaude = argv.includes("--claude");
   const wantCodex = argv.includes("--codex");
   const engines =
     wantClaude || wantCodex
       ? [wantClaude && "claude", wantCodex && "codex"].filter(Boolean)
       : ["claude", "codex"];
-  return { command, engines, dryRun: argv.includes("--dry-run") };
+  return { command, ticket, forStep, engines, dryRun: argv.includes("--dry-run") };
 }
 
 /**

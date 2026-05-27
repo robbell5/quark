@@ -27,3 +27,9 @@ test("bin/quark dispatches install and uninstall via lib", () => {
   assert.ok(/from "\.\.\/src\/lib\.mjs"/.test(src), "imports from lib");
   assert.ok(src.includes("process.exit(1)"), "errors on unknown subcommand");
 });
+
+test("bin/quark dispatches the check subcommand via check.mjs", () => {
+  const src = fs.readFileSync(bin, "utf8");
+  assert.ok(src.includes('opts.command === "check"'), "branches on check");
+  assert.ok(/from "\.\.\/src\/check\.mjs"/.test(src), "imports runCheck from check.mjs");
+});

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STEPS } from "../src/lib.mjs";
+import { SCHEMAS, parseSections, parseFrontmatter } from "../src/check.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
@@ -136,4 +137,31 @@ test("config.md does not reference _shared.md (it is not inlined there)", () => 
     !read("playbook/config.md").includes("_shared.md"),
     "config command does not bundle _shared.md, so it must not name it",
   );
+});
+
+test("every template structurally matches its schema (no drift)", () => {
+  for (const [name, schema] of Object.entries(SCHEMAS)) {
+    assert.ok(
+      fs.existsSync(path.join(root, `templates/${name}.md`)),
+      `templates/${name}.md is missing (a SCHEMAS entry has no template)`,
+    );
+    const text = read(`templates/${name}.md`);
+    const { h1, sections } = parseSections(text);
+    if (schema.h1) {
+      assert.ok(
+        h1 && h1.startsWith(schema.h1),
+        `templates/${name}.md H1 must start with "${schema.h1}"`,
+      );
+    }
+    for (const sec of schema.sections ?? []) {
+      assert.ok(sec in sections, `templates/${name}.md missing "## ${sec}"`);
+    }
+    if (schema.frontmatter) {
+      const fm = parseFrontmatter(text);
+      assert.ok(fm, `templates/${name}.md needs frontmatter`);
+      for (const key of schema.frontmatter) {
+        assert.ok(key in fm, `templates/${name}.md frontmatter missing "${key}"`);
+      }
+    }
+  }
 });

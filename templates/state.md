@@ -1,8 +1,12 @@
-# State: <TICKET-ID>
+---
+ticket: <TICKET-ID>
+current_step: frame
+status: in-progress
+driving_engine: <Claude Code | Codex>
+updated: <ISO-8601 timestamp>
+---
 
-- **Current step:** frame
-- **Status:** in-progress
-- **Driving engine:** <Claude Code | Codex>
+# State: <TICKET-ID>
 
 ## Completed
 
@@ -10,7 +14,7 @@
 
 ## Decisions & deviations
 
-- <none yet>
+- None
 
 ## Next action
 
@@ -18,4 +22,4 @@
 
 ## Gotchas for the next runner
 
-- <none yet>
+- None
