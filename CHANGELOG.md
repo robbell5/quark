@@ -5,6 +5,28 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.6.0] - 2026-05-27
+
+### Added
+
+- **Cold-start orientation.** `_shared.md` now opens every step with an
+  orient-before-you-act routine: re-ground from `.work/<TICKET>/`, read
+  `state.md` to confirm the step's position in the loop, and catch a re-run
+  before it overwrites. Steps stay correct even outside a fresh session;
+  context hygiene is what a fresh session buys.
+- **Fresh-session handoffs.** Each step's handoff now tells the developer to
+  start a new session and run the next step; a new "One step per session"
+  principle states the convention.
+- **`quark check <TICKET>` baton.** The no-`--for` form prints the `state.md`
+  baton (current step, status, driver, updated, next action) before the
+  artifact report — a deterministic answer to "where am I?" when resuming.
+  Backed by `batonSummary` in `src/check.mjs`.
+
+### Changed
+
+- README "The loop" now documents running each step in a fresh session and the
+  `quark check <TICKET>` resume surface.
+
 ## [0.5.0] - 2026-05-27
 
 ### Added

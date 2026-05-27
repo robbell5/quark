@@ -38,3 +38,5 @@ that no `.work/` path appears in the PR diff.
 ## Handoff
 
 Update `.work/<TICKET-ID>/state.md`: current step `ship`, status `done`.
+
+Then tell the developer: the ticket is shipped — no further step.

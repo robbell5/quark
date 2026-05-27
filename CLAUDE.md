@@ -22,7 +22,8 @@ only. The product is the Markdown in `playbook/`; the installer is plumbing.
 ## Layout
 
 - `playbook/` — the product. `_shared.md` (artifact schema, `state.md` format,
-  principles, reviewer invocations) plus the six step files: `frame.md`,
+  cold-start orientation, principles, reviewer invocations) plus the six step
+  files: `frame.md`,
   `plan.md`, `review.md`, `build.md`, `verify.md`, `ship.md`. Plus `config.md`,
   the `/quark-config` utility playbook.
 - `shims/claude.md`, `shims/codex.md` — per-engine `SKILL.md` header templates
@@ -39,7 +40,7 @@ only. The product is the Markdown in `playbook/`; the installer is plumbing.
   `engineTargets`, `parseArgs`, `install`, `uninstall`.
 - `src/check.mjs` — the `quark check` validator: `SCHEMAS` contract,
   `parseSections`, `parseFrontmatter`, `validateArtifact`, `checkReadiness`,
-  `runCheck`.
+  `runCheck`, `batonSummary`.
 - `bin/quark` — the CLI entry (`install` / `uninstall` / `check`) that wires
   `src/lib.mjs` and `src/check.mjs` to argv.
 - `templates/` — `.work/<TICKET>/` skeletons (`context.md`, `plan.md`,
@@ -77,6 +78,8 @@ source of truth — the playbooks and code are.
   `examples/<name>.md` references found in the playbook source.
 - The `quark check` gate (run inside each step) expects the global `quark` CLI
   on `PATH`. Install globally with `npm i -g github:robbell5/quark`.
+  `quark check <TICKET>` (no `--for`) also prints the `state.md` baton — the
+  resume surface for a fresh session.
 - Follow test-driven development for logic changes; keep commits small and
   focused, and run `node --test` before marking work done.
 

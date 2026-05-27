@@ -48,3 +48,6 @@ Do not declare `frame` done until it does.
 
 Update `.work/<TICKET-ID>/state.md`: current step `frame`, status `done` (or
 `blocked`), next action `plan`, and any gotchas for the next runner.
+
+Then tell the developer: `frame` is done — start a new session and run
+`quark-plan`.

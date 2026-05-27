@@ -83,11 +83,24 @@ Safe to re-run.
 
 Per ticket: `/quark-frame <ticket>` → `/quark-plan` → (`/quark-review`) →
 `/quark-build` → `/quark-verify` → `/quark-ship` on Claude Code; the same steps
-are `$quark-frame <ticket>` … `$quark-ship` on Codex. Planning artifacts live in
-`.work/<TICKET>/` and are stripped before the PR. Switch engines any time —
-`state.md` is the handoff. Each step runs `quark check <ticket> --for <step>`
-as a precondition gate and `quark check <ticket>` as a self-check, so a step
-refuses to start from a malformed upstream artifact.
+are `$quark-frame <ticket>` … `$quark-ship` on Codex.
+
+**Run each step in a fresh session.** Every step is a cold start: it wakes with
+no memory of the previous one and re-grounds from `.work/<TICKET>/`. A fresh
+session per step is what keeps context clean — the whole point of the handoff
+files. Running several steps in one session still works (each step re-reads the
+files), it just spends context you did not need to. Switch engines any time —
+`state.md` is the handoff.
+
+**Resume.** Forgotten where a ticket stands? Run `quark check <TICKET>`: it
+prints the `state.md` baton (current step, status, driver, updated, next
+action) and validates the artifacts. Then open a fresh session and run the
+next step.
+
+Planning artifacts live in `.work/<TICKET>/` and are stripped before the PR.
+Each step also runs `quark check <ticket> --for <step>` as a precondition gate
+and `quark check <ticket>` as a self-check, so a step refuses to start from a
+malformed upstream artifact.
 
 ## Development
 

@@ -43,3 +43,6 @@ Blocking item is left without a resolution.
 
 Update `.work/<TICKET-ID>/state.md`: current step `review`, status `done` (or
 `blocked` if blocking items are unresolved), next action `build`.
+
+Then tell the developer: `review` is done — start a new session and run
+`quark-build`.

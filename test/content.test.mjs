@@ -69,6 +69,24 @@ test("_shared.md documents both reviewer invocations and the fallback", () => {
   assert.ok(/fallback/i.test(shared));
 });
 
+test("_shared.md carries the cold-start orientation block", () => {
+  const shared = read("playbook/_shared.md");
+  assert.ok(/## Cold start/i.test(shared), "missing the Cold start section");
+  assert.ok(/fresh session/i.test(shared), "must frame steps as fresh sessions");
+  assert.ok(
+    shared.includes("state.md") && /re-running|already complete/i.test(shared),
+    "orientation must read state.md and handle a re-run",
+  );
+});
+
+test("_shared.md states the one-step-per-session principle", () => {
+  assert.ok(/one step per session/i.test(read("playbook/_shared.md")));
+});
+
+test("config.md does not inherit the orientation block (it omits _shared)", () => {
+  assert.ok(!/## Cold start/i.test(read("playbook/config.md")));
+});
+
 test("config shims: STEP, no clone path, reviewer-free; only Claude uses $ARGUMENTS", () => {
   for (const engine of ["claude", "codex"]) {
     const tpl = read(`shims/${engine}-config.md`);
@@ -186,6 +204,30 @@ test("frame references the context and state examples; plan references the plan 
   const plan = read("playbook/plan.md");
   assert.ok(plan.includes("examples/plan.md"));
   assert.ok(plan.includes("examples/plan-too-vague.md"));
+});
+
+test("each step handoff sets up the next session (ship signals completion)", () => {
+  for (const step of STEPS) {
+    const body = read(`playbook/${step}.md`);
+    if (step === "ship") {
+      assert.ok(
+        /shipped|no further step/i.test(body),
+        "ship handoff must signal completion",
+      );
+    } else {
+      assert.ok(
+        /(fresh|new) session/i.test(body),
+        `playbook/${step}.md handoff must nudge a new session`,
+      );
+    }
+  }
+});
+
+test("README teaches fresh sessions and the resume surface", () => {
+  const readme = read("README.md");
+  assert.ok(/fresh session/i.test(readme), "README must teach fresh sessions");
+  assert.ok(/resume/i.test(readme) && readme.includes("quark check"),
+    "README must document resume via quark check");
 });
 
 test("config.md documents the consented quark check permission grant", () => {

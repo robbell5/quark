@@ -42,3 +42,6 @@ and the check passes.
 
 Update `.work/<TICKET-ID>/state.md`: current step `plan`, status `done`, next
 action `review` (sensitive slices) or `build`.
+
+Then tell the developer: `plan` is done — start a new session and run
+`quark-review` (sensitive slices) or `quark-build`.

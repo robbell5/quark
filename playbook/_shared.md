@@ -50,8 +50,30 @@ updated: <ISO-8601 timestamp>
 - <anything non-obvious needed to continue on the other engine>
 ```
 
+## Cold start: orient before you act
+
+Each Quark step is built to run in a fresh session. Assume no memory of earlier
+steps — the `.work/<TICKET-ID>/` files are the only source of truth. Before
+doing the step's own work:
+
+1. No `.work/<TICKET-ID>/` or `state.md` yet → this is a new ticket; you should
+   be running `frame`. Proceed.
+2. Otherwise read `state.md` and compare its `current_step` / `status` /
+   `## Next action` to the step you were invoked as:
+   - On track (you are the expected next step) → proceed to this step's
+     Precondition.
+   - Already complete (state shows this step done) → you are re-running it;
+     confirm with the developer before overwriting prior artifacts.
+   - Ahead (an upstream step is incomplete) → the Precondition gate will fail;
+     stop and report. Do not work from missing or invalid upstream artifacts.
+3. Re-read this step's named Inputs every time; never rely on remembered
+   content.
+
 ## Principles (apply in every step)
 
+- **One step per session.** Each step is a cold start; when one finishes, the
+  next runs in a fresh session — the closing handoff tells the developer to
+  start one.
 - **Ambiguity is closed before code.** Confirm scope and resolve open questions
   before planning; do not start `build` until the plan is solid.
 - **Ephemeral docs.** `.work/` is scratch; it is gitignored and stripped/

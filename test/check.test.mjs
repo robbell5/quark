@@ -12,6 +12,7 @@ import {
   validateArtifact,
   checkReadiness,
   runCheck,
+  batonSummary,
 } from "../src/check.mjs";
 import { STEPS } from "../src/lib.mjs";
 
@@ -281,6 +282,72 @@ const goodPlan = [
   "None",
 ].join("\n");
 
+const goodState = [
+  "---",
+  "ticket: RAY-001",
+  "current_step: build",
+  "status: in-progress",
+  "driving_engine: Claude Code",
+  "updated: 2026-05-27T10:00:00Z",
+  "---",
+  "# State: RAY-001",
+  "",
+  "## Completed",
+  "",
+  "- frame — context written",
+  "",
+  "## Decisions & deviations",
+  "",
+  "None",
+  "",
+  "## Next action",
+  "",
+  "- finish the JSON renderer unit, then run verify",
+  "",
+  "## Gotchas for the next runner",
+  "",
+  "None",
+].join("\n");
+
+test("batonSummary renders step, status, driver, and next action", () => {
+  const lines = batonSummary("RAY-001", goodState);
+  assert.ok(lines[0].includes("Baton for RAY-001"), "header names the ticket");
+  assert.ok(
+    lines.some((l) => l.includes("build") && l.includes("in-progress")),
+    "shows current_step and status",
+  );
+  assert.ok(lines.some((l) => l.includes("Claude Code")), "shows the driver");
+  assert.ok(
+    lines.some((l) => l.includes("finish the JSON renderer unit")),
+    "shows the next action",
+  );
+});
+
+test("batonSummary reports a new ticket when state.md is absent", () => {
+  const lines = batonSummary("RAY-001", null);
+  assert.equal(lines.length, 1);
+  assert.ok(/new ticket/i.test(lines[0]));
+});
+
+test("batonSummary degrades when state.md has no frontmatter", () => {
+  const lines = batonSummary("RAY-001", "# State: RAY-001\n\n## Next action\n\ngo");
+  assert.equal(lines.length, 1);
+  assert.ok(/no baton/i.test(lines[0]));
+});
+
+test("batonSummary strips a checkbox marker from the next action", () => {
+  const state = goodState.replace(
+    "- finish the JSON renderer unit, then run verify",
+    "- [ ] finish the JSON renderer unit, then run verify",
+  );
+  const lines = batonSummary("RAY-001", state);
+  assert.ok(
+    lines.some((l) => l.includes("next: finish the JSON renderer unit")),
+    "next action text is preserved",
+  );
+  assert.ok(!lines.some((l) => l.includes("[ ]")), "no raw checkbox marker leaks");
+});
+
 function workdir(files) {
   const dir = path.join(
     fs.mkdtempSync(path.join(os.tmpdir(), "quark-work-")),
@@ -396,6 +463,28 @@ test("runCheck (readiness mode) honors --for build", () => {
   const res = runCheck({ ticket: "RAY-001", step: "build", cwd });
   assert.equal(res.code, 0);
   assert.ok(res.lines[0].includes("Readiness"));
+});
+
+test("runCheck (artifact mode) prints the state.md baton first", () => {
+  const cwd = repoWith({ context: goodContext, plan: goodPlan, state: goodState });
+  const res = runCheck({ ticket: "RAY-001", cwd });
+  assert.equal(res.code, 0);
+  assert.ok(res.lines[0].includes("Baton for RAY-001"), "baton heads the output");
+  assert.ok(
+    res.lines.some((l) => l.includes("build") && l.includes("in-progress")),
+    "baton shows the current step",
+  );
+  assert.ok(
+    res.lines.some((l) => l.includes("Artifacts for RAY-001")),
+    "artifact report still present",
+  );
+});
+
+test("runCheck (artifact mode) shows a new-ticket baton when state.md is absent", () => {
+  const cwd = repoWith({ context: goodContext });
+  const res = runCheck({ ticket: "RAY-001", cwd });
+  assert.equal(res.code, 0, "absent state.md does not change the exit code");
+  assert.ok(res.lines.some((l) => /Baton for RAY-001: no state\.md/i.test(l)));
 });
 
 test("worked-example artifacts validate clean against their schemas", () => {

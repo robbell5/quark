@@ -46,3 +46,6 @@ declare `verify` done until both hold.
 
 Update `.work/<TICKET-ID>/state.md`: current step `verify`, status `done`, next
 action `ship`.
+
+Then tell the developer: `verify` is done — start a new session and run
+`quark-ship`.

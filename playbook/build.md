@@ -44,3 +44,6 @@ units are complete and the check passes.
 
 Update `.work/<TICKET-ID>/state.md`: current step `build`, status `done`, next
 action `verify`.
+
+Then tell the developer: `build` is done — start a new session and run
+`quark-verify`.

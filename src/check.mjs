@@ -294,6 +294,34 @@ export function checkReadiness(dir, step) {
 }
 
 /**
+ * Human-readable `state.md` baton lines for `quark check <TICKET>` (no --for):
+ * a deterministic answer to "where am I?". `text` is the state.md contents, or
+ * null when the file is absent. Never throws.
+ */
+export function batonSummary(ticket, text) {
+  if (text === null) {
+    return [`Baton for ${ticket}: no state.md yet (new ticket)`];
+  }
+  const fm = parseFrontmatter(text);
+  if (!fm || !fm.current_step) {
+    return [`Baton for ${ticket}: no baton (state.md unreadable)`];
+  }
+  const { sections } = parseSections(text);
+  const next =
+    (sections["Next action"] ?? "")
+      .split("\n")
+      .map((l) => l.replace(/^[-*]\s*(\[[ xX]\]\s*)?/, "").trim())
+      .find((l) => l) ?? "—";
+  return [
+    `Baton for ${ticket} (from state.md):`,
+    `  step: ${fm.current_step} (${fm.status ?? "?"}) · driver: ${
+      fm.driving_engine ?? "?"
+    } · updated: ${fm.updated ?? "?"}`,
+    `  next: ${next}`,
+  ];
+}
+
+/**
  * Run the validator for a ticket. With `step`, checks readiness to enter it;
  * without, validates every artifact present. Returns `{ code, lines }`:
  * code 0 = pass, 1 = validation failure, 2 = usage error. Does no printing.
@@ -315,6 +343,11 @@ export function runCheck({ ticket, step = null, cwd = process.cwd() }) {
     warnings = r.warnings;
     lines.push(`Readiness for "${step}" on ${ticket}:`);
   } else {
+    const statePath = path.join(dir, "state.md");
+    const stateText = fs.existsSync(statePath)
+      ? fs.readFileSync(statePath, "utf8")
+      : null;
+    lines.push(...batonSummary(ticket, stateText));
     for (const name of Object.keys(SCHEMAS)) {
       const p = path.join(dir, `${name}.md`);
       if (!fs.existsSync(p)) continue;
