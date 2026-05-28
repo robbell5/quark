@@ -7,7 +7,7 @@ output as structured data instead of parsing the human-readable table.
 
 ## Acceptance criteria
 
-- AC1: `status --json` prints a single JSON object to stdout and exits 0.
+- AC1: `status --json` prints a single JSON object to stdout (exit code 0).
 - AC2: The JSON includes every field shown in the table (id, state, updated).
 - AC3: Existing `status` (no flag) output is byte-for-byte unchanged.
 

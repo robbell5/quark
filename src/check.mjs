@@ -182,6 +182,18 @@ function hasCheckbox(body) {
 const AC_DEF_RE = /^[-*]\s+(AC\d+):\s+\S/;
 const AC_REF_RE = /\(AC\d+(?:\s*,\s*AC\d+)*\)/g;
 
+// AC-quality heuristics — advisory warnings only, never errors. They nudge
+// toward the quality bar taught in frame.md; the author judges. `AC_TEXT_RE`
+// captures an AC's id and its prose so the heuristics can scan the text.
+const AC_TEXT_RE = /^[-*]\s+(AC\d+):\s+(.*)$/;
+const SUBJECTIVE_TERMS = [
+  "robust", "clean", "maintainable", "appropriate", "appropriately",
+  "proper", "properly", "user-friendly", "performant", "scalable",
+  "intuitive", "seamless", "efficient", "flexible", "simple", "nice",
+  "good", "reliable", "secure", "fast", "easy",
+];
+const SUBJECTIVE_RE = new RegExp(`\\b(${SUBJECTIVE_TERMS.join("|")})\\b`, "i");
+
 /**
  * Parse acceptance-criterion ids from a context's `## Acceptance criteria`.
  * Returns `{ ids, errors, warnings }`: malformed items and duplicate ids are
@@ -226,6 +238,37 @@ export function collectAcRefs(body) {
 }
 
 /**
+ * Advisory (never-blocking) quality warnings for a context's acceptance
+ * criteria, nudging toward the quality bar in frame.md. Per AC it flags two
+ * mechanical smells: a compound criterion (joined by "and" or ";") and a bare
+ * subjective term ("robust", "clean", …). Outcome-shape is intentionally not
+ * checked — its heuristic is too noisy; it is taught, not gated. Pure; no-ops
+ * when the section is absent. False positives are acceptable: the channel is
+ * advisory and the author judges.
+ */
+export function acQualityWarnings(contextText) {
+  const { sections } = parseSections(contextText);
+  const warnings = [];
+  for (const item of listItems(sections["Acceptance criteria"] ?? "")) {
+    const m = item.match(AC_TEXT_RE);
+    if (!m) continue; // a malformed/missing id is parseAcIds' job (an error there)
+    const [, id, text] = m;
+    if (/\band\b/i.test(text) || text.includes(";")) {
+      warnings.push(
+        `context: ${id} may be compound ("… and …") — consider splitting into atomic criteria`,
+      );
+    }
+    const sub = text.match(SUBJECTIVE_RE);
+    if (sub) {
+      warnings.push(
+        `context: ${id} uses a subjective term ("${sub[1]}") — phrase it as an observable check`,
+      );
+    }
+  }
+  return warnings;
+}
+
+/**
  * Linkage checks against a context's acceptance-criterion ids. `coverFrom` must
  * cite every defined AC (coverage); every `(ACn)` in `integrityFrom` must
  * resolve to a defined AC (integrity). No-op when `contextText` is null or
@@ -256,8 +299,9 @@ function acCoverage(contextText, { coverFrom, integrityFrom, label }) {
 
 /**
  * Structurally validate one artifact's text against its schema. Returns
- * `{ errors, warnings }`. `errors` block; `warnings` are advisory. Quality is
- * out of scope — only structure is checked.
+ * `{ errors, warnings }`. `errors` block and check structure only; `warnings`
+ * are advisory and never block — structural nudges plus AC-quality smells (see
+ * `acQualityWarnings`).
  */
 export function validateArtifact(name, text, schema) {
   const errors = [];
@@ -332,6 +376,7 @@ export function validateArtifact(name, text, schema) {
     const ac = parseAcIds(text);
     errors.push(...ac.errors);
     warnings.push(...ac.warnings);
+    warnings.push(...acQualityWarnings(text));
   }
 
   return { errors, warnings };

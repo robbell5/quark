@@ -5,6 +5,27 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.11.0] - 2026-05-28
+
+### Added
+
+- **Acceptance-criterion quality bar in `frame`.** A five-criterion standard —
+  Atomic, Observable, Outcome-shaped, Traceable, Bounded — taught in
+  `playbook/frame.md`, anchored by a new `examples/context-vague-acs.md`
+  anti-example and three new failure modes. The acceptance criteria are the
+  spine the rest of the loop keys off, so this hardens the loop's load-bearing
+  input.
+- **Advisory AC-quality warnings in `quark check`.** `acQualityWarnings` in
+  `src/check.mjs` nudges (never blocks) on two mechanical smells — a compound AC
+  (joined by "and"/";") and a bare subjective term ("robust", "clean", …) —
+  surfaced through the existing warnings channel, never the `--for` readiness
+  gates. Outcome-shape is taught, not gated; the hard AC-linkage contract is
+  unchanged.
+- **AC-soundness critique in `review`.** `playbook/review.md` gains a bullet so a
+  cold-start reviewer judges whether the acceptance criteria themselves are
+  atomic, observable, and traceable, marking a vague load-bearing AC Blocking and
+  routing it back to `frame`.
+
 ## [0.10.0] - 2026-05-28
 
 ### Added

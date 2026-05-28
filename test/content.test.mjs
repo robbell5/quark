@@ -329,6 +329,15 @@ test("plan records approval through the gate", () => {
   assert.ok(/approv/i.test(plan));
 });
 
+test("review critiques AC soundness, not just plan coverage", () => {
+  const review = read("playbook/review.md");
+  assert.ok(/AC soundness/i.test(review), "review must critique AC soundness");
+  assert.ok(
+    /atomic/i.test(review) && /observable/i.test(review),
+    "AC soundness names the quality bar",
+  );
+});
+
 test("review is native, records a verdict, and has no headless fallback", () => {
   const review = read("playbook/review.md");
   assert.ok(!/fallback-approved/.test(review), "fallback-approved is retired");
@@ -446,4 +455,25 @@ test("the explore-digest example exists with the contract sections", () => {
   ]) {
     assert.ok(d.includes(sec), `explore-digest missing "${sec}"`);
   }
+});
+
+test("frame teaches the acceptance-criterion quality bar and its anti-example", () => {
+  const frame = read("playbook/frame.md");
+  for (const crit of ["Atomic", "Observable", "Outcome-shaped", "Traceable", "Bounded"]) {
+    assert.ok(frame.includes(crit), `frame.md missing AC criterion "${crit}"`);
+  }
+  assert.ok(
+    frame.includes("examples/context-vague-acs.md"),
+    "frame must reference the AC anti-example",
+  );
+});
+
+test("the vague-ACs anti-example exists and is marked as an anti-example", () => {
+  assert.ok(
+    fs.existsSync(path.join(root, "examples/context-vague-acs.md")),
+    "missing examples/context-vague-acs.md",
+  );
+  const ex = read("examples/context-vague-acs.md");
+  assert.ok(/ANTI-EXAMPLE/i.test(ex), "must be marked ANTI-EXAMPLE");
+  assert.ok(/Why this is bad/i.test(ex), "must explain why it is bad");
 });

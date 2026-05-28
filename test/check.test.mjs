@@ -18,6 +18,7 @@ import {
   setFrontmatterField,
   parseAcIds,
   collectAcRefs,
+  acQualityWarnings,
 } from "../src/check.mjs";
 import { STEPS } from "../src/lib.mjs";
 
@@ -529,6 +530,11 @@ test("worked-example artifacts validate clean against their schemas", () => {
   }
 });
 
+test("the clean worked-example context emits no AC-quality warnings", () => {
+  const ctx = fs.readFileSync(path.join(root, "examples", "context.md"), "utf8");
+  assert.deepEqual(acQualityWarnings(ctx), []);
+});
+
 test("planHash is a 12-char hex digest", () => {
   assert.match(planHash(goodPlan), /^[0-9a-f]{12}$/);
 });
@@ -778,6 +784,67 @@ test("collectAcRefs ignores a bare ACn in prose (no parens)", () => {
   assert.deepEqual([...collectAcRefs("AC1 is tricky to test")], []);
 });
 
+test("acQualityWarnings flags a compound AC (and / semicolon)", () => {
+  assert.ok(
+    acQualityWarnings(acContext(["- AC1: logs the user in and resets the password"]))
+      .some((w) => /AC1.*compound/i.test(w)),
+    "an AC joined by 'and' is flagged compound",
+  );
+  assert.ok(
+    acQualityWarnings(acContext(["- AC1: saves the record; emails the user"]))
+      .some((w) => /AC1.*compound/i.test(w)),
+    "an AC joined by ';' is flagged compound",
+  );
+});
+
+test("acQualityWarnings flags a bare subjective term", () => {
+  const w = acQualityWarnings(acContext(["- AC1: error handling is robust"]));
+  assert.ok(w.some((x) => /AC1.*subjective.*robust/i.test(x)));
+});
+
+test("acQualityWarnings is silent on a clean, atomic, observable AC", () => {
+  assert.deepEqual(
+    acQualityWarnings(acContext(["- AC1: rejects an invalid email with a message"])),
+    [],
+  );
+});
+
+test("acQualityWarnings no-ops when there are no acceptance criteria", () => {
+  assert.deepEqual(acQualityWarnings("# Context: RAY-001\n\n## Intent\n\nx"), []);
+});
+
+test("validateArtifact surfaces AC-quality warnings (advisory, not errors)", () => {
+  const text = goodContext.replace("- AC1: prints JSON", "- AC1: error handling is robust");
+  const { errors, warnings } = validateArtifact("context", text, SCHEMAS.context);
+  assert.deepEqual(errors, [], "AC quality never raises an error");
+  assert.ok(warnings.some((w) => /subjective/.test(w)));
+});
+
+test("runCheck surfaces AC-quality WARN lines without failing", () => {
+  const ctx = goodContext.replace(
+    "- AC1: prints JSON",
+    "- AC1: logs in and resets the password",
+  );
+  const cwd = repoWith({ context: ctx });
+  const res = runCheck({ ticket: "RAY-001", cwd });
+  assert.equal(res.code, 0, "advisory warnings never fail the check");
+  assert.ok(res.lines.some((l) => /WARN/.test(l) && /compound/.test(l)));
+});
+
+test("AC-quality warnings stay out of the --for readiness gates", () => {
+  // Characterization: requireValid forwards only .errors, so a weak AC neither
+  // blocks the gate nor leaks an advisory warning into it.
+  const ctx = goodContext.replace("- AC1: prints JSON", "- AC1: error handling is robust");
+  // The warning DOES exist at the artifact level...
+  const direct = validateArtifact("context", ctx, SCHEMAS.context).warnings;
+  assert.ok(direct.some((w) => /subjective/.test(w)), "warning exists at artifact level");
+  // ...but the readiness gate neither blocks on it nor surfaces it.
+  const dir = workdir({ context: ctx });
+  const { errors, warnings } = checkReadiness(dir, "plan");
+  assert.deepEqual(errors, [], "a weak AC does not block the gate");
+  assert.ok(!warnings.some((w) => /subjective/.test(w)), "gates forward errors only");
+});
+
 test("checkReadiness --for review flags an AC with no DoD coverage (R1)", () => {
   const plan = goodPlan.replace("- [ ] (AC1) flag works", "- [ ] flag works");
   const dir = workdir({ context: goodContext, plan });
@@ -855,4 +922,14 @@ test("the vague anti-example fails AC coverage at the review gate", () => {
   const dir = workdir({ context: ctx, plan });
   const { errors } = checkReadiness(dir, "review");
   assert.ok(errors.some((e) => /not covered by any Definition-of-done/.test(e)));
+});
+
+test("the vague-ACs anti-example trips AC-quality warnings", () => {
+  const ctx = fs.readFileSync(
+    path.join(root, "examples", "context-vague-acs.md"),
+    "utf8",
+  );
+  const w = acQualityWarnings(ctx);
+  assert.ok(w.some((x) => /compound/.test(x)), "anti-example shows a compound AC");
+  assert.ok(w.some((x) => /subjective/.test(x)), "anti-example shows a subjective AC");
 });

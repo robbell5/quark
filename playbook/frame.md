@@ -33,7 +33,10 @@ None — `frame` is the entry step.
    risks, and explicit out-of-scope items. Give each acceptance criterion a
    stable id — `- AC1: …`, `- AC2: …`, sequential from 1 — so the plan and UAT
    can cite it; downstream artifacts reference these ids, so don't renumber them
-   later. Write `None` in any genuinely empty section; never leave one blank.
+   later. Write each acceptance criterion to the **Acceptance-criterion quality**
+   bar below; when the ticket is too ambiguous to make one observable or bounded
+   without guessing, don't invent — raise it as an open question (step 7). Write
+   `None` in any genuinely empty section; never leave one blank.
 5. Confirm scope with the developer in one or two sentences — what this ticket
    does and does not include.
 6. Classify sensitivity: fill `## Sensitivity` in `context.md` with the
@@ -46,6 +49,30 @@ None — `frame` is the entry step.
    `examples/open-questions.md`. Resolve blocking questions with the developer
    now; unresolved blocking questions STOP progress — do not advance to `plan`.
 
+## Acceptance-criterion quality
+
+Each `ACn` is the spine the rest of the loop keys off — plan covers it, review
+checks it, verify proves it — so a vague AC corrupts everything downstream.
+Write each to this bar:
+
+- **Atomic** — one verifiable outcome per AC. Split "logs in *and* resets the
+  password" into two criteria.
+- **Observable** — confirmable true/false by behavior or output, implying its
+  own check. Not "error handling is robust" but "an empty email shows an inline
+  'Email required' error and blocks submit".
+- **Outcome-shaped** — state what is true when done, not the mechanism. Not "add
+  a `validateEmail` helper" but "`foo@` is rejected with a validation message".
+- **Traceable** — maps to ticket text or a recorded developer answer; nothing
+  invented.
+- **Bounded** — state the negative/edge case, or defer it to `## Out of scope`
+  on purpose. Not just "valid input saves" but also "a missing required field is
+  rejected and nothing is saved".
+
+`quark check` nudges (advisory, never blocking) on two mechanical smells — a
+compound AC ("… and …") and a bare subjective term ("robust", "clean") — but
+most of this bar is your judgment, not the gate's. See the anti-example in
+`examples/context-vague-acs.md`, then compare `examples/context.md`.
+
 ## Failure modes
 
 - Inventing requirements not traceable to the ticket → every acceptance
@@ -53,6 +80,12 @@ None — `frame` is the entry step.
 - An acceptance criterion that can't be checked → write each as something a
   later UAT step or test can reproduce, since plan and verify must cover it by
   `(ACn)`.
+- A compound acceptance criterion (one AC doing two jobs) → split it so each AC
+  names one outcome; a compound AC breaks the 1:1 plan/UAT coverage mapping.
+- A solution-shaped acceptance criterion (names a mechanism or code symbol) →
+  restate it as the observable result a user or test can see.
+- Happy-path-only criteria → state the negative/edge behavior, or defer it to
+  `## Out of scope` deliberately.
 - Asking what you could read → reserve open questions for genuine judgment
   calls; determine the rest from the code (see Eliciting decisions).
 - Silent scope creep → fill `## Out of scope` deliberately, not as an

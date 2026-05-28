@@ -28,6 +28,10 @@ non-zero, STOP and report — fix the plan's structure before reviewing prose.
      have to re-decide. Name the specific decision left open.
    - **Coverage of intent** — does each AC's Definition-of-done item actually
      establish that criterion, or only gesture at it?
+   - **AC soundness** — are the acceptance criteria themselves atomic, observable,
+     and traceable, or did a vague AC slip through `frame`? Downstream coverage of
+     a vague AC is vague coverage — name it **Blocking** and route back to
+     `frame`, not just `plan`.
    - **Missing edge cases / risks** — inputs, failure paths, or migrations the
      plan ignores.
    - **Test adequacy** — does the test strategy tie to behavior (the ACs), or
