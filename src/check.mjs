@@ -141,15 +141,22 @@ export function planHash(planText) {
 /**
  * Return `text` with frontmatter `key` set to `value` — updating the line in
  * place if present, else appending it as the last line of the `---` block.
- * Pure. Throws when `text` has no frontmatter block.
+ * Pure. Throws when `text` has no frontmatter block, or when `value` contains a
+ * newline: a single field value can never span lines, and rejecting it prevents
+ * a crafted value from forging additional frontmatter fields.
  */
 export function setFrontmatterField(text, key, value) {
+  if (/[\r\n]/.test(value)) {
+    throw new Error("setFrontmatterField: value must be single-line");
+  }
   const norm = text.replace(/\r\n/g, "\n");
   const m = norm.match(/^(---\n)([\s\S]*?)(\n---)/);
   if (!m) throw new Error("setFrontmatterField: no frontmatter block");
   const keyRe = new RegExp(`^${key}:.*$`, "m");
   const line = `${key}: ${value}`;
-  const newBody = keyRe.test(m[2]) ? m[2].replace(keyRe, line) : `${m[2]}\n${line}`;
+  // Use a replacer function so `$`-sequences in `value` (`$&`, `$1`, …) are
+  // inserted literally rather than interpreted as replacement patterns.
+  const newBody = keyRe.test(m[2]) ? m[2].replace(keyRe, () => line) : `${m[2]}\n${line}`;
   return (
     norm.slice(0, m.index) +
     m[1] + newBody + m[3] +
@@ -550,6 +557,18 @@ export function batonSummary(ticket, text) {
 }
 
 /**
+ * Resolve `.work/<ticket>/` under `cwd`, guarding against path traversal: a
+ * `ticket` that contains `..` (or is absolute) and escapes the `.work` root
+ * yields null. Pure; no filesystem access.
+ */
+function workDir(cwd, ticket) {
+  const root = path.resolve(cwd, ".work");
+  const dir = path.resolve(root, ticket);
+  if (dir !== root && !dir.startsWith(root + path.sep)) return null;
+  return dir;
+}
+
+/**
  * Stamp a gate outcome into `state.md`, binding it to the current plan hash.
  * `gate` is "plan-approved" or "review". Mirrors runCheck's `{ code, lines }`
  * contract; does no printing. code 0 = stamped, 2 = usage/precondition error.
@@ -561,7 +580,15 @@ export function runGate({
   if (!ticket || !gate) {
     return { code: 2, lines: ["usage: quark gate <TICKET-ID> <plan-approved|review> [--by <name>] [--waive <reason>] [--verdict <v>] [--note <text>]"] };
   }
-  const dir = path.join(cwd, ".work", ticket);
+  for (const [flag, v] of Object.entries({ by, waive, verdict, note })) {
+    if (v != null && /[\r\n]/.test(v)) {
+      return { code: 2, lines: [`--${flag} must be a single line (no newlines)`] };
+    }
+  }
+  const dir = workDir(cwd, ticket);
+  if (dir === null) {
+    return { code: 2, lines: [`invalid ticket id: ${ticket}`] };
+  }
   const planPath = path.join(dir, "plan.md");
   const statePath = path.join(dir, "state.md");
   if (!fs.existsSync(planPath)) {
@@ -607,7 +634,10 @@ export function runCheck({ ticket, step = null, cwd = process.cwd() }) {
   if (!ticket) {
     return { code: 2, lines: ["usage: quark check <TICKET-ID> [--for <step>]"] };
   }
-  const dir = path.join(cwd, ".work", ticket);
+  const dir = workDir(cwd, ticket);
+  if (dir === null) {
+    return { code: 2, lines: [`invalid ticket id: ${ticket}`] };
+  }
   if (!fs.existsSync(dir)) {
     return { code: 2, lines: [`no .work/${ticket}/ directory (run from the repo root)`] };
   }

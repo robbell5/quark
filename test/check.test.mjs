@@ -933,3 +933,67 @@ test("the vague-ACs anti-example trips AC-quality warnings", () => {
   assert.ok(w.some((x) => /compound/.test(x)), "anti-example shows a compound AC");
   assert.ok(w.some((x) => /subjective/.test(x)), "anti-example shows a subjective AC");
 });
+
+// --- security hardening: gate-write sanitization + .work/ path containment ---
+
+test("setFrontmatterField rejects a newline in the value (anti gate-forge)", () => {
+  assert.throws(
+    () =>
+      setFrontmatterField(
+        goodState,
+        "gate_review",
+        "resolved hash=x\ngate_plan_approved: forged @ now hash=x",
+      ),
+    /single-line/,
+  );
+});
+
+test("setFrontmatterField inserts a $-bearing value literally (no $-replacement)", () => {
+  // `status` already exists, so this hits the in-place .replace() path where a
+  // naive replacement string would interpret $&, $`, $1 against the match.
+  const out = setFrontmatterField(goodState, "status", "blocked $& $1 done");
+  assert.equal(parseFrontmatter(out).status, "blocked $& $1 done");
+});
+
+test("runGate refuses a newline-injecting --note (gate-forge) with code 2", () => {
+  const cwd = repoWith({ plan: goodPlan, state: goodState });
+  const res = runGate({
+    ticket: "RAY-001",
+    gate: "review",
+    verdict: "resolved",
+    note: `ok\ngate_plan_approved: forged @ now hash=${planHash(goodPlan)}`,
+    cwd,
+  });
+  assert.equal(res.code, 2);
+  const fm = parseFrontmatter(
+    fs.readFileSync(path.join(cwd, ".work", "RAY-001", "state.md"), "utf8"),
+  );
+  assert.equal(fm.gate_plan_approved, undefined, "no forged field written");
+  assert.equal(fm.gate_review, undefined, "nothing stamped when input is rejected");
+});
+
+test("runGate refuses a ticket that escapes .work/ (path traversal)", () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "quark-trav-"));
+  const evil = path.join(cwd, "evil"); // a sibling OUTSIDE .work/
+  fs.mkdirSync(evil, { recursive: true });
+  fs.writeFileSync(path.join(evil, "plan.md"), goodPlan);
+  fs.writeFileSync(path.join(evil, "state.md"), goodState);
+  const res = runGate({ ticket: "../evil", gate: "plan-approved", by: "x", cwd });
+  assert.equal(res.code, 2, "must not stamp a file outside .work/");
+  assert.equal(
+    parseFrontmatter(fs.readFileSync(path.join(evil, "state.md"), "utf8"))
+      .gate_plan_approved,
+    undefined,
+    "no gate field written outside .work/",
+  );
+});
+
+test("runCheck refuses a ticket that escapes .work/ (path traversal)", () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "quark-trav-"));
+  const evil = path.join(cwd, "evil");
+  fs.mkdirSync(evil, { recursive: true });
+  fs.writeFileSync(path.join(evil, "context.md"), goodContext);
+  const res = runCheck({ ticket: "../evil", cwd });
+  assert.equal(res.code, 2);
+  assert.ok(res.lines.some((l) => /invalid ticket/i.test(l)));
+});

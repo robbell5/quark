@@ -5,6 +5,33 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.12.0] - 2026-05-28
+
+### Added
+
+- **`SECURITY.md` disclosure policy.** Private vulnerability reporting via
+  GitHub Security Advisories, a latest-only support stance, and install-integrity
+  guidance (pin `npx`/`npm i` installs to a tag or commit SHA rather than
+  tracking the default branch).
+- **Untrusted-input convention.** `playbook/_shared.md` (inherited by every
+  step) and the `quark-explorer` worker now frame ticket / issue / PR / diff
+  text and worker digests as data to summarize, never instructions to obey —
+  closing a prompt-injection path for downstream users of the harness.
+
+### Security
+
+- **Gate-write sanitization.** `setFrontmatterField` rejects newline-bearing
+  values and inserts the value through a replacer function, so an agent-derived
+  `--note` / `--by` can no longer forge other `state.md` gate fields (e.g. stamp
+  `gate_plan_approved` during a `review` gate) or corrupt the frontmatter via
+  `$`-replacement patterns. `runGate` rejects multi-line flag values up front.
+- **`.work/` path containment.** `runGate` and `runCheck` resolve the ticket id
+  through a `workDir` helper that refuses a `<TICKET-ID>` resolving outside the
+  `.work/` root (e.g. `../../etc`), removing a path-traversal primitive.
+- **Defensive `.gitignore`.** Added secret-file patterns (`.env*`, `*.pem`,
+  `*.key`, …) and `.claude/settings.local.json`, so a fork or fresh clone cannot
+  stage them without relying on a maintainer's machine-local global ignore.
+
 ## [0.11.1] - 2026-05-28
 
 ### Fixed

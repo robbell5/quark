@@ -17,3 +17,18 @@ npm-debug.log*
 
 # Superpowers planning scaffold — ephemeral specs/plans, kept local only
 docs/superpowers/
+
+# Local env / secrets — defensive, never commit (none exist today)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+credentials*
+
+# Local agent / editor config (portable; not reliant on a global ignore)
+.claude/settings.local.json
