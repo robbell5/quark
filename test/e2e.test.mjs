@@ -4,9 +4,22 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { STEPS, UTILITIES, installEngine, installEngineAgents, engineTargets } from "../src/lib.mjs";
+import { STEPS, UTILITIES, install, installEngine, installEngineAgents, engineTargets } from "../src/lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+/** Recursively copy a file or directory tree (zero-dep, no experimental warning). */
+function copyInto(src, dest) {
+  if (fs.statSync(src).isDirectory()) {
+    fs.mkdirSync(dest, { recursive: true });
+    for (const entry of fs.readdirSync(src)) {
+      copyInto(path.join(src, entry), path.join(dest, entry));
+    }
+  } else {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+  }
+}
 
 test("end-to-end: self-contained skills land in both engine dirs", () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "quark-home-"));
@@ -82,5 +95,31 @@ test("end-to-end: self-contained skills land in both engine dirs", () => {
     const agentBody = fs.readFileSync(agentFile, "utf8");
     assert.ok(!agentBody.includes("{{"), `${engine}: agent placeholder left`);
     assert.ok(agentBody.includes("Relevant files"), `${engine}: explorer body inlined`);
+  }
+});
+
+// Guards packaging completeness: every asset directory the installer reads must
+// be shipped in package.json `files`, or `npx github:...` install fails with
+// ENOENT. Reproduces the npm/npx environment in-process by running install()
+// against a tree containing ONLY the files-allowlisted paths — so any future
+// directory the installer reads but forgets to ship fails here, with no
+// parallel hardcoded list to maintain.
+test("packaging: installer runs against only the files-allowlisted tree", () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(root, "package.json"), "utf8"),
+  );
+  const packed = fs.mkdtempSync(path.join(os.tmpdir(), "quark-packed-"));
+  for (const entry of pkg.files) {
+    const rel = entry.replace(/\/$/, "");
+    const src = path.join(root, rel);
+    if (fs.existsSync(src)) copyInto(src, path.join(packed, rel));
+  }
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "quark-home-"));
+  const results = install({ engines: ["claude", "codex"], root: packed, home });
+  for (const r of results) {
+    assert.ok(
+      r.agents >= 1,
+      `${r.engine}: no agents composed from packaged tree — missing dir in package.json "files"?`,
+    );
   }
 });

@@ -5,6 +5,19 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.11.1] - 2026-05-28
+
+### Fixed
+
+- **`agents/` now ships in the published package.** `package.json`'s `files`
+  allowlist omitted the `agents/` directory added in 0.10.0, so the explorer
+  sub-agent spec never made it into the tarball and
+  `npx github:robbell5/quark install` failed with `ENOENT … agents/explorer.md`.
+  Added `agents/` to the allowlist, plus a packaging guard in
+  `test/e2e.test.mjs` that runs the installer against a tree containing only the
+  `files`-allowlisted paths, so any future asset directory the installer reads
+  but forgets to ship fails the suite.
+
 ## [0.11.0] - 2026-05-28
 
 ### Added
