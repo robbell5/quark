@@ -13,9 +13,11 @@ so the other engine can resume.
 
 ## Precondition
 
-Run `quark check <TICKET-ID> --for build`. If it exits non-zero, STOP and
-report — the plan must be valid, `context.md`'s open questions closed, and any
-Blocking review items resolved before building.
+Run `quark check <TICKET-ID> --for build`. If it exits non-zero, STOP and report —
+the plan must be valid, its open questions closed, the plan **approved with a
+hash that still matches** (`quark gate … plan-approved`), and — on a sensitive
+slice — a review recorded with a matching hash. Any Blocking review item must be
+resolved.
 
 ## Procedure
 
@@ -30,14 +32,16 @@ Blocking review items resolved before building.
    (keep it to the shape of `examples/state.md` — Completed / Decisions &
    deviations / Next action / Gotchas): the completed item (+ commit hash), any
    decision/deviation, the next action.
-5. STOP on drift: if the plan is wrong or scope must change, pause, update
-   `context.md`/`plan.md`, and reconcile with the developer before continuing.
-   Do not silently expand scope.
+5. STOP on drift: if the plan is wrong or scope must change, do not continue in
+   place. Update `context.md`/`plan.md`, then route back through `plan`
+   (re-approval) and, for sensitive slices, `review` — changing the plan
+   invalidates the approval hash, so `quark check --for build` will block until
+   it is re-approved. Reconcile with the developer before resuming.
 
 ## Failure modes
 
-- Silent scope expansion → STOP on drift: pause, update context/plan, and
-  reconcile with the developer before continuing.
+- Silent scope expansion → STOP on drift: pause, update context/plan, and route
+  back through plan/review; do not continue on a changed plan.
 - A stale `state.md` → update it after each meaningful unit; it is the resume
   point for the other engine.
 - An unfocused diff → only what the plan calls for; no drive-by cleanup or

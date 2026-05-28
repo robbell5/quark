@@ -4,6 +4,7 @@ current_step: frame
 status: in-progress
 driving_engine: <Claude Code | Codex>
 updated: <ISO-8601 timestamp>
+#gate_plan_approved / gate_review are stamped by `quark gate` — do not hand-edit
 ---
 
 # State: <TICKET-ID>

@@ -33,3 +33,9 @@ test("bin/quark dispatches the check subcommand via check.mjs", () => {
   assert.ok(src.includes('opts.command === "check"'), "branches on check");
   assert.ok(/from "\.\.\/src\/check\.mjs"/.test(src), "imports runCheck from check.mjs");
 });
+
+test("bin/quark dispatches the gate subcommand via check.mjs", () => {
+  const src = fs.readFileSync(bin, "utf8");
+  assert.ok(src.includes('opts.command === "gate"'), "branches on gate");
+  assert.ok(src.includes("runGate"), "imports and calls runGate");
+});

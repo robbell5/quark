@@ -17,7 +17,7 @@ style every step playbook follows.
 
 ## Status
 
-Active — v0.7.0. The harness is built, tested (`node --test`), and installable
+Active — v0.8.0. The harness is built, tested (`node --test`), and installable
 via `npx github:robbell5/quark install` (or `node bin/quark install` from a
 clone). It installs as **Agent Skills** on both engines —
 `~/.claude/skills/quark-*/` and `~/.agents/skills/quark-*/`, explicit-invocation
@@ -43,10 +43,11 @@ only. The product is the Markdown in `playbook/`; the installer is plumbing.
   `composeCommand`, `installEngine`, `uninstallEngine`, `sweepLegacy`,
   `engineTargets`, `parseArgs`, `install`, `uninstall`.
 - `src/check.mjs` — the `quark check` validator: `SCHEMAS` contract,
-  `parseSections`, `parseFrontmatter`, `validateArtifact`, `checkReadiness`,
-  `runCheck`, `batonSummary`.
-- `bin/quark` — the CLI entry (`install` / `uninstall` / `check`) that wires
-  `src/lib.mjs` and `src/check.mjs` to argv.
+  `parseSections`, `parseFrontmatter`, `validateArtifact`, `planHash`,
+  `setFrontmatterField`, `checkReadiness`, `runCheck`, `runGate`,
+  `batonSummary`.
+- `bin/quark` — the CLI entry (`install` / `uninstall` / `check` / `gate`) that
+  wires `src/lib.mjs` and `src/check.mjs` to argv.
 - `templates/` — `.work/<TICKET>/` skeletons (`context.md`, `plan.md`,
   `state.md`, `uat.md`, `review.md`, `pr.md`). `state.md` carries a
   frontmatter baton.

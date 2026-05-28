@@ -20,17 +20,28 @@ report — `context.md` and `plan.md` must be valid before review.
 
 ## Procedure
 
-1. Determine mode: plan review (pre-build, no diff yet) or diff review
+1. Routing: run a review when `context.md`'s `## Sensitivity` is not `None`
+   (auth, money, ownership, PII, data-integrity, migrations); it is optional for
+   trivial, non-sensitive slices. Skipping a warranted review is a failure mode.
+2. Determine mode: plan review (pre-build, no diff yet) or diff review
    (post-build, a working diff exists).
-2. Identify the reviewing engine from this shim's identity (Claude drives →
+3. Identify the reviewing engine from this shim's identity (Claude drives →
    Codex reviews; Codex drives → Claude reviews). Use the exact read-only
    invocation from the Shared Conventions above.
-3. Run the reviewer by path: plan review → `context.md` + `plan.md`; diff
+4. Run the reviewer by path: plan review → `context.md` + `plan.md`; diff
    review → the working git diff + `plan.md` + `context.md`.
-4. If the other engine's CLI is unavailable, follow the Shared Conventions
+5. If the other engine's CLI is unavailable, follow the Shared Conventions
    fallback (a clearly-labeled same-engine self-review).
-5. Triage every blocking/important item: fold into the plan, fix in build, or
+6. Triage every blocking/important item: fold into the plan, fix in build, or
    consciously reject with a reason. Surface blocking items to the developer.
+7. Record the verdict: `quark gate <TICKET-ID> review --verdict
+   <passed|resolved>`. If the other engine's CLI was unavailable and you fell
+   back to a same-engine self-review on a sensitive slice, the developer must
+   consciously accept the weaker control: record `quark gate <TICKET-ID> review
+   --verdict fallback-approved --by "<name>"`.
+8. If triage folds a reviewer's change back into the plan, the plan has changed:
+   re-record approval (and, on a sensitive slice, the review) — the hash gate in
+   `quark check --for build` will otherwise block.
 
 ## Failure modes
 
@@ -41,6 +52,8 @@ report — `context.md` and `plan.md` must be valid before review.
   the Shared Conventions.
 - Dropping a Blocking item silently → unresolved Blocking items STOP progress and
   are surfaced to the developer.
+- Skipping a warranted review → if `## Sensitivity` ≠ None, a review is required;
+  `quark check --for build` blocks without a recorded verdict.
 
 ## Output
 

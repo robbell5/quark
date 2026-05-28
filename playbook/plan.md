@@ -54,13 +54,18 @@ Run `quark check <TICKET-ID> --for plan`. If it exits non-zero, STOP and report 
 ## Self-check
 
 Run `quark check <TICKET-ID>` and confirm `plan.md` reports OK, then present the
-plan for developer review. Implementation does not begin until the plan is solid
-and the check passes.
+plan to the developer for review. Implementation does not begin until they
+approve: record the approval with `quark gate <TICKET-ID> plan-approved --by
+"<name>"` (the developer may run this themselves). That stamps the plan's hash
+into `state.md`; `quark check --for build` enforces it, and any later edit to the
+plan invalidates the approval.
 
 ## Handoff
 
 Update `.work/<TICKET-ID>/state.md`: current step `plan`, status `done`, next
-action `review` (sensitive slices) or `build`.
+action `review` (sensitive slices) or `build` — but note that `build` will not
+start until the plan is approved (and, for sensitive slices, reviewed).
 
-Then tell the developer: `plan` is done — start a new session and run
-`quark-review` (sensitive slices) or `quark-build`.
+Then tell the developer: `plan` is done — record approval with
+`quark gate <TICKET-ID> plan-approved --by "<name>"`, then start a new session and
+run the `review` step (sensitive slices) or `build`.

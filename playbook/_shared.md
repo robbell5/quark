@@ -50,6 +50,14 @@ updated: <ISO-8601 timestamp>
 - <anything non-obvious needed to continue on the other engine>
 ```
 
+Two optional gate fields are stamped by `quark gate` (never hand-edited); each
+carries the plan hash it cleared, so a later plan edit invalidates them:
+
+- `gate_plan_approved: <name> @ <ts> hash=<h>` — the developer's plan approval.
+  Required by `quark check --for build`.
+- `gate_review: <passed|resolved|fallback-approved> … hash=<h>` — the review
+  outcome. Required for build on a sensitive slice.
+
 ## Cold start: orient before you act
 
 Each Quark step is built to run in a fresh session. Assume no memory of earlier
@@ -106,7 +114,8 @@ required:
 
 Quark ships a `quark check` CLI; install it globally so it is on `PATH`
 (`npm i -g github:robbell5/quark`). It structurally validates the
-`.work/<TICKET-ID>/` artifacts. Every step uses it twice:
+`.work/<TICKET-ID>/` artifacts. Most steps use it twice (`frame`, the entry
+step, has no precondition gate):
 
 - **Precondition gate** — `quark check <TICKET-ID> --for <step>` answers "is the
   work ready to enter this step?" Run it first; if it exits non-zero, STOP and
@@ -177,4 +186,8 @@ claude -p "Review the working git diff (git diff) against
 
 **Fallback:** if the other engine's CLI is not installed or not authenticated
 (the command errors), record that in `review.md` and perform a same-engine
-self-review instead, clearly labeled as a weaker substitute.
+self-review instead, clearly labeled as a weaker substitute. On a **sensitive**
+slice (`## Sensitivity` ≠ None) a same-engine fallback weakens the
+independent-review control, so it must be consciously accepted by the developer
+and recorded with `quark gate <TICKET-ID> review --verdict fallback-approved --by
+"<name>"`; otherwise `quark check --for build` blocks.

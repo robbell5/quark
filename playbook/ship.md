@@ -17,10 +17,14 @@ report — `uat.md` must show a passing result before shipping.
 
 ## Procedure
 
-1. Leak check: confirm `.work/` is gitignored and that no `.work/` files (or
-   other scratch) appear in the diff — `git status` and
-   `git diff --name-only $(git merge-base origin/HEAD HEAD)..HEAD`. If anything
-   leaked, remove it.
+1. Leak check: confirm `.work/` is gitignored. Determine the PR base from the
+   default branch — `base=$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null |
+   sed 's@^origin/@@')`; fall back to `main` if unset — and inspect both the
+   committed diff (`git diff --name-only "$base"...HEAD`) and the working tree
+   (`git status --porcelain`). Strip generated `.work/` scratch (it is
+   gitignored, so it should not appear). Do NOT blindly delete: anything
+   untracked or staged that is not recognized `.work/` scratch is confirmed with
+   the developer before removal.
 2. Self-review the full diff for focus and quality. Trim stray changes.
 3. Write `.work/<TICKET-ID>/pr.md` from `templates/pr.md`: a reviewer-friendly
    body — what changed, why, and the verification evidence (gate results, UAT
@@ -30,8 +34,9 @@ report — `uat.md` must show a passing result before shipping.
 
 ## Failure modes
 
-- `.work/` (or other scratch) leaking into the diff → run the leak check and
-  remove anything that slipped in before opening the PR.
+- `.work/` (or other scratch) leaking into the diff → run the leak check;
+  remove recognized `.work/` scratch; confirm anything else with the developer
+  before deleting.
 - A PR body without verification evidence → summarize the gate results and the
   UAT outcome, not just the change.
 - Publishing instead of drafting → open a draft; the developer publishes after

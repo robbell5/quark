@@ -11,6 +11,8 @@ leniently.
 - `.work/<TICKET-ID>/plan.md` (the definition-of-done) and
   `.work/<TICKET-ID>/context.md` (the acceptance criteria).
 - The steering doc's gate commands (lint, typecheck, test, build).
+- The implementation diff — `git diff` against the base branch — which the
+  security pass reads.
 
 ## Precondition
 
@@ -27,10 +29,10 @@ report — `plan.md` must be valid and `state.md` must show `build` complete.
 3. Write/refresh `.work/<TICKET-ID>/uat.md` from `templates/uat.md`: a short
    manual walkthrough mapped to the acceptance criteria. Replay it (or have the
    developer replay it) and record the result (`pass`/`fail`).
-4. Security pass (conditional): if the slice touches authentication,
-   authorization/access control, money, PII, or database migrations, review for
-   the obvious failure modes (authz gaps, injection, secret exposure, migration
-   safety) and record findings.
+4. Security pass: if `context.md`'s `## Sensitivity` is not `None`, review the
+   diff for the failure modes implied by its categories — authz gaps, injection,
+   secret exposure, migration safety — and record findings. Skip only when
+   Sensitivity is `None`.
 5. Confirm every definition-of-done item is checked with evidence. Never mark
    `verify` done on assertion alone.
 
@@ -39,8 +41,8 @@ report — `plan.md` must be valid and `state.md` must show `build` complete.
 - Claiming a gate passed without the output → run it; record the actual result.
 - A UAT walkthrough that doesn't map to the acceptance criteria → each step names
   the criterion it exercises (see `examples/uat.md`).
-- Skipping the security pass on a sensitive slice → auth, money, PII, and
-  migrations always get the conditional review.
+- Skipping the security pass on a sensitive slice → when `## Sensitivity` ≠
+  `None`, the security pass is required; skip only when Sensitivity is `None`.
 
 ## Output
 

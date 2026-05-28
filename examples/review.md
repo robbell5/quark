@@ -27,3 +27,5 @@ None
   test for the empty case.
 - Helper ordering (minor) — reject: `renderStatusJson` already sits beside
   `renderStatusTable`, which is the closer neighbor; sibling proximity wins.
+- Verdict recorded: `quark gate RAY-001 review --verdict resolved` (the other
+  engine reviewed; no fallback needed here).

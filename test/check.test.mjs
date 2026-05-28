@@ -12,7 +12,10 @@ import {
   validateArtifact,
   checkReadiness,
   runCheck,
+  runGate,
   batonSummary,
+  planHash,
+  setFrontmatterField,
 } from "../src/check.mjs";
 import { STEPS } from "../src/lib.mjs";
 
@@ -114,6 +117,10 @@ const goodContext = [
   "## Out of scope",
   "",
   "- other commands",
+  "",
+  "## Sensitivity",
+  "",
+  "None",
   "",
   "## Open questions",
   "",
@@ -459,7 +466,12 @@ test("runCheck (artifact mode) fails and reports a malformed artifact", () => {
 });
 
 test("runCheck (readiness mode) honors --for build", () => {
-  const cwd = repoWith({ context: goodContext, plan: goodPlan });
+  const state = setFrontmatterField(
+    goodState,
+    "gate_plan_approved",
+    `Dev @ 2026-05-27T00:00:00Z hash=${planHash(goodPlan)}`,
+  );
+  const cwd = repoWith({ context: goodContext, plan: goodPlan, state });
   const res = runCheck({ ticket: "RAY-001", step: "build", cwd });
   assert.equal(res.code, 0);
   assert.ok(res.lines[0].includes("Readiness"));
@@ -493,4 +505,198 @@ test("worked-example artifacts validate clean against their schemas", () => {
     const { errors } = validateArtifact(name, text, SCHEMAS[name]);
     assert.deepEqual(errors, [], `examples/${name}.md: ${errors.join("; ")}`);
   }
+});
+
+test("planHash is a 12-char hex digest", () => {
+  assert.match(planHash(goodPlan), /^[0-9a-f]{12}$/);
+});
+
+test("planHash is stable under whitespace reflow", () => {
+  const reflowed = goodPlan
+    .replace("Add the flag.", "Add\nthe   flag.")
+    .replace("- src/x.mjs — add flag", "-   src/x.mjs — add flag");
+  assert.equal(planHash(reflowed), planHash(goodPlan));
+});
+
+test("planHash changes when section content changes", () => {
+  const edited = goodPlan.replace("Add the flag.", "Add TWO flags.");
+  assert.notEqual(planHash(edited), planHash(goodPlan));
+});
+
+test("setFrontmatterField updates an existing key in place", () => {
+  const out = setFrontmatterField(goodState, "status", "done");
+  const fm = parseFrontmatter(out);
+  assert.equal(fm.status, "done");
+  assert.ok(out.includes("# State: RAY-001"), "body is preserved");
+});
+
+test("setFrontmatterField appends a new key before the closing fence", () => {
+  const out = setFrontmatterField(goodState, "gate_plan_approved", "Dev hash=abc123");
+  const fm = parseFrontmatter(out);
+  assert.equal(fm.gate_plan_approved, "Dev hash=abc123");
+  assert.ok(fm.ticket === "RAY-001", "existing keys untouched");
+});
+
+test("setFrontmatterField throws when there is no frontmatter", () => {
+  assert.throws(() => setFrontmatterField("# Plan: X\n\n## Approach\n\nx", "k", "v"));
+});
+
+test("context schema requires a Sensitivity section", () => {
+  assert.ok(SCHEMAS.context.sections.includes("Sensitivity"));
+  const text = goodContext.replace("## Sensitivity\n\nNone\n\n", "");
+  const { errors } = validateArtifact("context", text, SCHEMAS.context);
+  assert.ok(errors.some((e) => e.includes("Sensitivity")));
+});
+
+const approvedState = (planText) =>
+  setFrontmatterField(
+    goodState,
+    "gate_plan_approved",
+    `Dev @ 2026-05-27T00:00:00Z hash=${planHash(planText)}`,
+  );
+
+test("checkReadiness --for build blocks an unapproved plan", () => {
+  const dir = workdir({ context: goodContext, plan: goodPlan, state: goodState });
+  const { errors } = checkReadiness(dir, "build");
+  assert.ok(errors.some((e) => /not approved/i.test(e)));
+});
+
+test("checkReadiness --for build blocks when the plan changed since approval", () => {
+  const state = approvedState(goodPlan);
+  const editedPlan = goodPlan.replace("Add the flag.", "Add a totally different thing.");
+  const dir = workdir({ context: goodContext, plan: editedPlan, state });
+  const { errors } = checkReadiness(dir, "build");
+  assert.ok(errors.some((e) => /changed since approval/i.test(e)));
+});
+
+test("checkReadiness --for build passes a fresh approval on a non-sensitive slice", () => {
+  const dir = workdir({
+    context: goodContext,
+    plan: goodPlan,
+    state: approvedState(goodPlan),
+  });
+  assert.deepEqual(checkReadiness(dir, "build").errors, []);
+});
+
+const sensitiveContext = goodContext.replace(
+  "## Sensitivity\n\nNone",
+  "## Sensitivity\n\n- auth",
+);
+
+const cleanReview = [
+  "# Review: RAY-001",
+  "",
+  "## Blocking",
+  "",
+  "None",
+  "",
+  "## Important",
+  "",
+  "None",
+  "",
+  "## Minor",
+  "",
+  "None",
+  "",
+  "## Resolutions",
+  "",
+  "None",
+].join("\n");
+
+const sensitiveState = (planText, reviewValue) => {
+  let s = approvedState(planText);
+  if (reviewValue !== undefined) s = setFrontmatterField(s, "gate_review", reviewValue);
+  return s;
+};
+
+test("build blocks a sensitive slice with no review", () => {
+  const dir = workdir({
+    context: sensitiveContext,
+    plan: goodPlan,
+    state: sensitiveState(goodPlan, `resolved hash=${planHash(goodPlan)}`),
+  });
+  const { errors } = checkReadiness(dir, "build");
+  assert.ok(errors.some((e) => /sensitive slice requires a review/i.test(e)));
+});
+
+test("build blocks a sensitive slice with no recorded verdict", () => {
+  const dir = workdir({
+    context: sensitiveContext,
+    plan: goodPlan,
+    review: cleanReview,
+    state: sensitiveState(goodPlan), // no gate_review
+  });
+  const { errors } = checkReadiness(dir, "build");
+  assert.ok(errors.some((e) => /recorded review verdict/i.test(e)));
+});
+
+test("build blocks a sensitive slice whose review predates a plan change", () => {
+  const dir = workdir({
+    context: sensitiveContext,
+    plan: goodPlan,
+    review: cleanReview,
+    state: sensitiveState(goodPlan, "resolved hash=deadbeef0000"),
+  });
+  const { errors } = checkReadiness(dir, "build");
+  assert.ok(errors.some((e) => /changed since review/i.test(e)));
+});
+
+test("build passes a sensitive slice with a fresh, real review", () => {
+  const dir = workdir({
+    context: sensitiveContext,
+    plan: goodPlan,
+    review: cleanReview,
+    state: sensitiveState(goodPlan, `resolved hash=${planHash(goodPlan)}`),
+  });
+  assert.deepEqual(checkReadiness(dir, "build").errors, []);
+});
+
+test("build accepts fallback-approved as a real verdict on a sensitive slice", () => {
+  const dir = workdir({
+    context: sensitiveContext,
+    plan: goodPlan,
+    review: cleanReview,
+    state: sensitiveState(goodPlan, `fallback-approved — by Dev hash=${planHash(goodPlan)}`),
+  });
+  assert.deepEqual(checkReadiness(dir, "build").errors, []);
+});
+
+test("runGate stamps gate_plan_approved with the current plan hash", () => {
+  const cwd = repoWith({ plan: goodPlan, state: goodState });
+  const res = runGate({ ticket: "RAY-001", gate: "plan-approved", by: "Rob", cwd });
+  assert.equal(res.code, 0);
+  const state = fs.readFileSync(
+    path.join(cwd, ".work", "RAY-001", "state.md"), "utf8",
+  );
+  const fm = parseFrontmatter(state);
+  assert.match(fm.gate_plan_approved, /^Rob @ .* hash=[0-9a-f]{12}$/);
+  assert.ok(fm.gate_plan_approved.includes(`hash=${planHash(goodPlan)}`));
+});
+
+test("runGate records a waiver reason", () => {
+  const cwd = repoWith({ plan: goodPlan, state: goodState });
+  runGate({ ticket: "RAY-001", gate: "plan-approved", by: "Rob", waive: "trivial", cwd });
+  const fm = parseFrontmatter(
+    fs.readFileSync(path.join(cwd, ".work", "RAY-001", "state.md"), "utf8"),
+  );
+  assert.match(fm.gate_plan_approved, /^waived \(trivial\)/);
+});
+
+test("runGate stamps gate_review with a verdict and hash", () => {
+  const cwd = repoWith({ plan: goodPlan, state: goodState });
+  runGate({ ticket: "RAY-001", gate: "review", verdict: "resolved", cwd });
+  const fm = parseFrontmatter(
+    fs.readFileSync(path.join(cwd, ".work", "RAY-001", "state.md"), "utf8"),
+  );
+  assert.equal(fm.gate_review, `resolved hash=${planHash(goodPlan)}`);
+});
+
+test("runGate returns code 2 without plan.md", () => {
+  const cwd = repoWith({ state: goodState });
+  assert.equal(runGate({ ticket: "RAY-001", gate: "plan-approved", cwd }).code, 2);
+});
+
+test("runGate returns code 2 for an unknown gate", () => {
+  const cwd = repoWith({ plan: goodPlan, state: goodState });
+  assert.equal(runGate({ ticket: "RAY-001", gate: "bogus", cwd }).code, 2);
 });

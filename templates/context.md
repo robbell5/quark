@@ -24,6 +24,11 @@
 
 - <explicitly not included>
 
+## Sensitivity
+
+- <triggered categories: auth, authorization, money, PII, data-integrity,
+  migrations — or write "None">
+
 ## Open questions
 
 - [ ] <question to resolve with the developer before planning>

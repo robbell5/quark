@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { STEPS } from "./lib.mjs";
@@ -22,6 +23,7 @@ export const SCHEMAS = {
       "Constraints",
       "Risks",
       "Out of scope",
+      "Sensitivity",
       "Open questions",
     ],
     minItems: { "Acceptance criteria": 1, "Out of scope": 1 },
@@ -110,6 +112,40 @@ export function parseFrontmatter(text) {
   return fm;
 }
 
+/**
+ * A 12-char hex digest of a plan's content, computed over its `##` section
+ * bodies with whitespace collapsed and sections name-sorted. Stable under
+ * markdownlint reflow; changes when real content changes. Used to bind a
+ * recorded approval/review to the exact plan it cleared.
+ */
+export function planHash(planText) {
+  const { sections } = parseSections(planText);
+  const norm = Object.entries(sections)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, body]) => `${name}\n${body.replace(/\s+/g, " ").trim()}`)
+    .join("\n");
+  return crypto.createHash("sha256").update(norm).digest("hex").slice(0, 12);
+}
+
+/**
+ * Return `text` with frontmatter `key` set to `value` — updating the line in
+ * place if present, else appending it as the last line of the `---` block.
+ * Pure. Throws when `text` has no frontmatter block.
+ */
+export function setFrontmatterField(text, key, value) {
+  const norm = text.replace(/\r\n/g, "\n");
+  const m = norm.match(/^(---\n)([\s\S]*?)(\n---)/);
+  if (!m) throw new Error("setFrontmatterField: no frontmatter block");
+  const keyRe = new RegExp(`^${key}:.*$`, "m");
+  const line = `${key}: ${value}`;
+  const newBody = keyRe.test(m[2]) ? m[2].replace(keyRe, line) : `${m[2]}\n${line}`;
+  return (
+    norm.slice(0, m.index) +
+    m[1] + newBody + m[3] +
+    norm.slice(m.index + m[0].length)
+  );
+}
+
 // A placeholder is `<...>` with no space right after `<` (e.g. `<TICKET-ID>`,
 // `<Claude Code | Codex>`). The no-space rule avoids matching comparison prose
 // like "x < 10 > 0", where operators are written with surrounding spaces.
@@ -126,6 +162,13 @@ function listItems(body) {
 /** True when the body contains at least one `- [ ]` / `- [x]` checkbox. */
 function hasCheckbox(body) {
   return /^[-*]\s+\[[ xX]\]/m.test(body);
+}
+
+/** True when a context's `## Sensitivity` lists any category other than None. */
+function isSensitive(ctxText) {
+  const { sections } = parseSections(ctxText);
+  const s = (sections.Sensitivity ?? "").trim();
+  return s !== "" && !/^(-\s*)?none$/i.test(s);
 }
 
 /**
@@ -213,7 +256,7 @@ function stepReached(fm, target) {
 }
 
 /**
- * Validate that `dir` (a `.work/<TICKET>/`) is ready to ENTER `step`, applying
+ * Validate that `dir` (a `.work/<TICKET-ID>/`) is ready to ENTER `step`, applying
  * the cross-artifact gates. Returns `{ errors, warnings }`.
  */
 export function checkReadiness(dir, step) {
@@ -255,7 +298,25 @@ export function checkReadiness(dir, step) {
     case "build": {
       const ctx = requireValid("context");
       if (ctx !== null) openQuestionsResolved(ctx);
-      requireValid("plan");
+      const planText = requireValid("plan");
+      const stateText = readArtifact("state");
+      const fm = stateText !== null ? parseFrontmatter(stateText) : null;
+
+      const approval = fm?.gate_plan_approved;
+      if (!approval) {
+        errors.push(
+          "plan not approved — run `quark gate <TICKET-ID> plan-approved --by <name>`",
+        );
+      } else if (planText !== null) {
+        const want = planHash(planText);
+        const got = (approval.match(/hash=([0-9a-f]+)/) ?? [])[1];
+        if (got !== want) {
+          errors.push(
+            "plan changed since approval — re-run `quark gate <TICKET-ID> plan-approved`",
+          );
+        }
+      }
+
       const review = readArtifact("review");
       if (review !== null) {
         const { sections } = parseSections(review);
@@ -264,6 +325,24 @@ export function checkReadiness(dir, step) {
         const hasBlocking = blocking !== "" && blocking !== "None";
         if (hasBlocking && (resolutions === "" || resolutions === "None")) {
           errors.push("review.md has Blocking items but no Resolutions");
+        }
+      }
+
+      if (ctx !== null && isSensitive(ctx)) {
+        if (review === null) {
+          errors.push("sensitive slice requires a review — run the review step first");
+        }
+        const verdict = (fm?.gate_review ?? "").trim();
+        if (!/^(passed|resolved|fallback-approved)\b/.test(verdict)) {
+          errors.push(
+            "sensitive slice needs a recorded review verdict (passed/resolved/fallback-approved)",
+          );
+        } else if (planText !== null) {
+          const want = planHash(planText);
+          const got = (verdict.match(/hash=([0-9a-f]+)/) ?? [])[1];
+          if (got !== want) {
+            errors.push("plan changed since review — re-review the sensitive slice");
+          }
         }
       }
       break;
@@ -294,7 +373,7 @@ export function checkReadiness(dir, step) {
 }
 
 /**
- * Human-readable `state.md` baton lines for `quark check <TICKET>` (no --for):
+ * Human-readable `state.md` baton lines for `quark check <TICKET-ID>` (no --for):
  * a deterministic answer to "where am I?". `text` is the state.md contents, or
  * null when the file is absent. Never throws.
  */
@@ -322,13 +401,55 @@ export function batonSummary(ticket, text) {
 }
 
 /**
+ * Stamp a gate outcome into `state.md`, binding it to the current plan hash.
+ * `gate` is "plan-approved" or "review". Mirrors runCheck's `{ code, lines }`
+ * contract; does no printing. code 0 = stamped, 2 = usage/precondition error.
+ */
+export function runGate({
+  ticket, gate, by = null, waive = null, verdict = null, note = null,
+  cwd = process.cwd(),
+}) {
+  if (!ticket || !gate) {
+    return { code: 2, lines: ["usage: quark gate <TICKET-ID> <plan-approved|review> [--by <name>] [--waive <reason>] [--verdict <v>] [--note <text>]"] };
+  }
+  const dir = path.join(cwd, ".work", ticket);
+  const planPath = path.join(dir, "plan.md");
+  const statePath = path.join(dir, "state.md");
+  if (!fs.existsSync(planPath)) {
+    return { code: 2, lines: [`no plan.md for ${ticket} — cannot gate before a plan exists`] };
+  }
+  if (!fs.existsSync(statePath)) {
+    return { code: 2, lines: [`no state.md for ${ticket}`] };
+  }
+  const hash = planHash(fs.readFileSync(planPath, "utf8"));
+  const now = new Date().toISOString();
+  let key, value;
+  if (gate === "plan-approved") {
+    key = "gate_plan_approved";
+    value = waive
+      ? `waived (${waive}) — ${by ?? "developer"} @ ${now} hash=${hash}`
+      : `${by ?? "developer"} @ ${now} hash=${hash}`;
+  } else if (gate === "review") {
+    key = "gate_review";
+    const byPart = by ? ` — by ${by}` : "";
+    const notePart = note ? ` (${note})` : "";
+    value = `${verdict ?? "resolved"}${byPart}${notePart} hash=${hash}`;
+  } else {
+    return { code: 2, lines: [`unknown gate: ${gate} (use plan-approved or review)`] };
+  }
+  const updated = setFrontmatterField(fs.readFileSync(statePath, "utf8"), key, value);
+  fs.writeFileSync(statePath, updated);
+  return { code: 0, lines: [`Stamped ${key} for ${ticket}: ${value}`] };
+}
+
+/**
  * Run the validator for a ticket. With `step`, checks readiness to enter it;
  * without, validates every artifact present. Returns `{ code, lines }`:
  * code 0 = pass, 1 = validation failure, 2 = usage error. Does no printing.
  */
 export function runCheck({ ticket, step = null, cwd = process.cwd() }) {
   if (!ticket) {
-    return { code: 2, lines: ["usage: quark check <TICKET> [--for <step>]"] };
+    return { code: 2, lines: ["usage: quark check <TICKET-ID> [--for <step>]"] };
   }
   const dir = path.join(cwd, ".work", ticket);
   if (!fs.existsSync(dir)) {

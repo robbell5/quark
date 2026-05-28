@@ -426,3 +426,29 @@ test("composeCommand omits Examples when none are referenced", () => {
   assert.ok(!out.includes("## Examples"));
   assert.ok(!out.includes("GOOD-PLAN"));
 });
+
+test("parseArgs reads the gate subcommand, name, and --by", () => {
+  const opts = parseArgs(["gate", "RAY-001", "plan-approved", "--by", "Rob Bell"]);
+  assert.equal(opts.command, "gate");
+  assert.equal(opts.ticket, "RAY-001");
+  assert.equal(opts.gate, "plan-approved");
+  assert.equal(opts.by, "Rob Bell");
+});
+
+test("parseArgs reads --waive on a gate", () => {
+  const opts = parseArgs(["gate", "RAY-001", "plan-approved", "--waive", "trivial slice"]);
+  assert.equal(opts.waive, "trivial slice");
+});
+
+test("parseArgs reads --verdict and --note on a review gate", () => {
+  const opts = parseArgs(["gate", "RAY-001", "review", "--verdict", "resolved", "--note", "n"]);
+  assert.equal(opts.gate, "review");
+  assert.equal(opts.verdict, "resolved");
+  assert.equal(opts.note, "n");
+});
+
+test("parseArgs gate flags do not leak into positionals", () => {
+  const opts = parseArgs(["gate", "RAY-001", "review", "--verdict", "passed"]);
+  assert.equal(opts.gate, "review");
+  assert.equal(opts.verdict, "passed");
+});

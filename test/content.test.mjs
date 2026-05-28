@@ -311,3 +311,42 @@ test("judgment steps reference their few-shot examples, and the files exist", ()
     );
   }
 });
+
+test("frame classifies sensitivity into context", () => {
+  assert.ok(/Sensitivity/.test(read("playbook/frame.md")));
+});
+
+test("plan records approval through the gate", () => {
+  const plan = read("playbook/plan.md");
+  assert.ok(/quark gate/.test(plan), "plan must record approval via quark gate");
+  assert.ok(/approv/i.test(plan));
+});
+
+test("review routes by sensitivity and guards the fallback", () => {
+  const review = read("playbook/review.md");
+  assert.ok(/Sensitivity/.test(review), "review must route off Sensitivity");
+  assert.ok(/fallback-approved/.test(review), "review must guard the fallback");
+});
+
+test("build routes drift back through plan/review", () => {
+  const build = read("playbook/build.md");
+  assert.ok(/re-approv/i.test(build) || /plan\/review/.test(build));
+});
+
+test("verify reads the diff and keys the security pass off Sensitivity", () => {
+  const verify = read("playbook/verify.md");
+  assert.ok(/git diff/.test(verify), "verify must take the diff as input");
+  assert.ok(/Sensitivity/.test(verify));
+});
+
+test("ship cleans safely and computes a robust base", () => {
+  const ship = read("playbook/ship.md");
+  assert.ok(/--porcelain/.test(ship), "ship must inspect the working tree");
+  assert.ok(/origin\/HEAD|default branch/.test(ship));
+});
+
+test("_shared documents the gate fields and the sensitive fallback rule", () => {
+  const shared = read("playbook/_shared.md");
+  assert.ok(/gate_plan_approved/.test(shared));
+  assert.ok(/fallback-approved/.test(shared));
+});

@@ -5,6 +5,26 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.8.0] - 2026-05-28
+
+### Added
+
+- **Plan-approval gate.** `quark gate <TICKET> plan-approved` stamps a plan hash
+  into `state.md`; `quark check --for build` blocks an unapproved or changed
+  plan.
+- **Sensitivity classification.** One `## Sensitivity` section in `context.md`
+  (set at `frame`) drives review routing, the verify security pass, and the
+  reviewer-fallback control.
+- **Sensitive-slice review gate.** Sensitive slices require a recorded,
+  hash-matching review before build; a same-engine fallback must be
+  developer-approved (`--verdict fallback-approved`).
+- **Build-drift routing.** Build drift now routes back through plan/review;
+  verify reads the diff; ship cleans `.work/` scratch safely and computes its
+  diff base robustly.
+- **`quark gate` subcommand.** New CLI entry; backed by `planHash`,
+  `setFrontmatterField`, and `runGate` in `src/check.mjs`. Zero new runtime
+  dependencies.
+
 ## [0.7.0] - 2026-05-27
 
 ### Added
@@ -181,6 +201,7 @@ Initial release: the dual-engine issue-level harness.
 
 [kac]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0.html
+[0.8.0]: https://github.com/robbell5/quark/releases/tag/v0.8.0
 [0.7.0]: https://github.com/robbell5/quark/releases/tag/v0.7.0
 [0.6.0]: https://github.com/robbell5/quark/releases/tag/v0.6.0
 [0.5.0]: https://github.com/robbell5/quark/releases/tag/v0.5.0

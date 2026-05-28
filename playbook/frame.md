@@ -31,7 +31,11 @@ None — `frame` is the entry step.
    section; never leave one blank.
 5. Confirm scope with the developer in one or two sentences — what this ticket
    does and does not include.
-6. List open questions in `context.md`, following the **Eliciting decisions**
+6. Classify sensitivity: fill `## Sensitivity` in `context.md` with the
+   categories this slice touches — auth, authorization, money, PII,
+   data-integrity, migrations — or `None`. This one classification drives review
+   routing and the verify security pass downstream, so do not leave it implicit.
+7. List open questions in `context.md`, following the **Eliciting decisions**
    guide in the Shared Conventions: ask only what the code and tracker cannot
    answer, batch them, and propose a default for each. See
    `examples/open-questions.md`. Resolve blocking questions with the developer
@@ -45,11 +49,14 @@ None — `frame` is the entry step.
   calls; determine the rest from the code (see Eliciting decisions).
 - Silent scope creep → fill `## Out of scope` deliberately, not as an
   afterthought.
+- Leaving sensitivity implicit → always fill `## Sensitivity` (write `None`
+  only when no category truly applies); review routing keys off it.
 
 ## Output
 
 - `.work/<TICKET-ID>/context.md` conforming to `templates/context.md`, with the
-  `## Open questions` checkboxes all resolved. See `examples/context.md`.
+  `## Open questions` checkboxes all resolved and `## Sensitivity` filled. See
+  `examples/context.md`.
 - `.work/<TICKET-ID>/state.md` initialized from `templates/state.md` (see
   `examples/state.md`): `current_step: frame`, status `done` (or `blocked` if
   questions remain).

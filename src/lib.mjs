@@ -189,31 +189,41 @@ export function sweepLegacy({ legacyDir, names, prefix = "quark-" }) {
 }
 
 /**
- * Parse argv into { command, ticket, forStep, engines, dryRun }. The first
- * non-flag positional is the subcommand (default "install"); the second is the
- * ticket (used by `check`). Flags: --claude, --codex, --dry-run, and
- * --for <step> (the readiness target for `check`).
+ * Parse argv into { command, ticket, gate, forStep, by, waive, verdict, note,
+ * engines, dryRun }. The first non-flag positional is the subcommand (default
+ * "install"); the second is the ticket; the third is the gate name (used by
+ * `gate`). Value-flags: --for <step> (readiness target for `check`),
+ * --by <author>, --waive <reason>, --verdict <value>, --note <text> (all for
+ * `gate`). Boolean flags: --claude, --codex, --dry-run.
  */
 export function parseArgs(argv) {
-  const forIdx = argv.indexOf("--for");
-  const forStep = forIdx !== -1 ? argv[forIdx + 1] ?? null : null;
   const skip = new Set();
-  if (forIdx !== -1) {
-    skip.add(forIdx);
-    skip.add(forIdx + 1);
-  }
-  const positional = argv.filter(
-    (a, i) => !a.startsWith("--") && !skip.has(i),
-  );
+  const flagValue = (name) => {
+    const i = argv.indexOf(name);
+    if (i === -1) return null;
+    skip.add(i);
+    skip.add(i + 1);
+    return argv[i + 1] ?? null;
+  };
+  const forStep = flagValue("--for");
+  const by = flagValue("--by");
+  const waive = flagValue("--waive");
+  const verdict = flagValue("--verdict");
+  const note = flagValue("--note");
+  const positional = argv.filter((a, i) => !a.startsWith("--") && !skip.has(i));
   const command = positional[0] ?? "install";
   const ticket = positional[1] ?? null;
+  const gate = positional[2] ?? null;
   const wantClaude = argv.includes("--claude");
   const wantCodex = argv.includes("--codex");
   const engines =
     wantClaude || wantCodex
       ? [wantClaude && "claude", wantCodex && "codex"].filter(Boolean)
       : ["claude", "codex"];
-  return { command, ticket, forStep, engines, dryRun: argv.includes("--dry-run") };
+  return {
+    command, ticket, gate, forStep, by, waive, verdict, note,
+    engines, dryRun: argv.includes("--dry-run"),
+  };
 }
 
 /**

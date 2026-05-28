@@ -31,6 +31,10 @@ output as structured data instead of parsing the human-readable table.
 - A `--json` flag on any command other than `status`.
 - Pretty-printing or color in JSON mode.
 
+## Sensitivity
+
+None
+
 ## Open questions
 
 - [x] Should timestamps be ISO-8601 strings? Resolved: yes, ISO-8601 UTC.
