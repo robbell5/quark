@@ -17,7 +17,7 @@ style every step playbook follows.
 
 ## Status
 
-Active — v0.10.0. The harness is built, tested (`node --test`), and installable
+Active — v0.12.0. The harness is built, tested (`node --test`), and installable
 via `npx github:robbell5/quark install` (or `node bin/quark install` from a
 clone). It installs as **Agent Skills** on both engines —
 `~/.claude/skills/quark-*/` and `~/.agents/skills/quark-*/`, explicit-invocation

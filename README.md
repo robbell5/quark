@@ -6,7 +6,7 @@ ambiguity before any code is written — confirm scope, close open questions,
 and produce a reliable, reviewed plan — then execute that plan faithfully,
 confirm acceptance criteria, strip the ephemeral planning docs, and open a PR.
 
-Status: active — v0.10.0. Installable and dogfooded.
+Status: active — v0.12.0. Installable and dogfooded.
 
 ## Why Quark
 
@@ -54,7 +54,8 @@ the old flat commands can't shadow the new skills. To remove them later:
 npx github:robbell5/quark uninstall
 ```
 
-Pin a version with a git ref, e.g. `npx github:robbell5/quark#v0.4.0 install`.
+Pin a version with a git ref. Only `v0.1.0` is tagged today, so pin to a commit
+SHA, e.g. `npx github:robbell5/quark#<commit-sha> install`.
 From a local clone the same commands are `node bin/quark install` /
 `node bin/quark uninstall`.
 
