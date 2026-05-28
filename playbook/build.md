@@ -13,11 +13,11 @@ so the other engine can resume.
 
 ## Precondition
 
-Run `quark check <TICKET-ID> --for build`. If it exits non-zero, STOP and report —
-the plan must be valid, its open questions closed, the plan **approved with a
-hash that still matches** (`quark gate … plan-approved`), and — on a sensitive
-slice — a review recorded with a matching hash. Any Blocking review item must be
-resolved.
+Run `quark check <TICKET-ID> --for build`. If it exits non-zero, STOP and
+report — the plan must be valid, every acceptance criterion covered by a
+Definition-of-done item, the plan **approved with a hash that still matches**
+(`quark gate … plan-approved`), and a review verdict recorded with a matching
+hash (`passed`/`resolved`/`accepted`). Any Blocking review item must be resolved.
 
 ## Procedure
 
@@ -34,9 +34,9 @@ resolved.
    decision/deviation, the next action.
 5. STOP on drift: if the plan is wrong or scope must change, do not continue in
    place. Update `context.md`/`plan.md`, then route back through `plan`
-   (re-approval) and, for sensitive slices, `review` — changing the plan
-   invalidates the approval hash, so `quark check --for build` will block until
-   it is re-approved. Reconcile with the developer before resuming.
+   (re-approval) and `review` — changing the plan invalidates both the approval
+   and review hashes, so `quark check --for build` will block until both are
+   re-recorded. Reconcile with the developer before resuming.
 
 ## Failure modes
 

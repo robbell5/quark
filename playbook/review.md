@@ -1,76 +1,84 @@
-# Step: review (conditional)
+# Step: review
 
-Goal: have the other engine critique the work. Run on sensitive slices (auth,
-money, ownership, data integrity); optional for trivial ones. Two modes.
+Goal: critique the plan against the actionability bar and record structured,
+addressable gaps, so a cold-start builder can execute it without re-deciding.
 
-**Stance:** You orchestrate a read-only critique from the other engine and
-triage it honestly — fold it in, fix it in build, or reject it *with a reason*.
-A review you rubber-stamp is worse than none.
+**Stance:** A fresh, skeptical reader. You did not write this plan — judge it on
+its face. Name gaps that are specific and fixable; a vague gap with no fix is
+noise, and a rubber-stamp is worse than no review.
 
 ## Inputs (read only these)
 
-- `.work/<TICKET-ID>/context.md` and `.work/<TICKET-ID>/plan.md`.
-- For a diff review: the working git diff as well.
-- This shim's declared engine identity (it names the reviewing engine).
+- `.work/<TICKET-ID>/context.md` — intent and acceptance criteria (`ACn`).
+- `.work/<TICKET-ID>/plan.md` — the plan under review.
 
 ## Precondition
 
-Run `quark check <TICKET-ID> --for review`. If it exits non-zero, STOP and
-report — `context.md` and `plan.md` must be valid before review.
+Run `quark check <TICKET-ID> --for review`. It validates `context.md` +
+`plan.md` and checks that every acceptance criterion is covered by a
+Definition-of-done item (and that every `(ACn)` resolves). If it exits
+non-zero, STOP and report — fix the plan's structure before reviewing prose.
 
 ## Procedure
 
-1. Routing: run a review when `context.md`'s `## Sensitivity` is not `None`
-   (auth, money, ownership, PII, data-integrity, migrations); it is optional for
-   trivial, non-sensitive slices. Skipping a warranted review is a failure mode.
-2. Determine mode: plan review (pre-build, no diff yet) or diff review
-   (post-build, a working diff exists).
-3. Identify the reviewing engine from this shim's identity (Claude drives →
-   Codex reviews; Codex drives → Claude reviews). Use the exact read-only
-   invocation from the Shared Conventions above.
-4. Run the reviewer by path: plan review → `context.md` + `plan.md`; diff
-   review → the working git diff + `plan.md` + `context.md`.
-5. If the other engine's CLI is unavailable, follow the Shared Conventions
-   fallback (a clearly-labeled same-engine self-review).
-6. Triage every blocking/important item: fold into the plan, fix in build, or
-   consciously reject with a reason. Surface blocking items to the developer.
-7. Record the verdict: `quark gate <TICKET-ID> review --verdict
-   <passed|resolved>`. If the other engine's CLI was unavailable and you fell
-   back to a same-engine self-review on a sensitive slice, the developer must
-   consciously accept the weaker control: record `quark gate <TICKET-ID> review
-   --verdict fallback-approved --by "<name>"`.
-8. If triage folds a reviewer's change back into the plan, the plan has changed:
-   re-record approval (and, on a sensitive slice, the review) — the hash gate in
-   `quark check --for build` will otherwise block.
+1. Read `context.md`, then `plan.md`. Hold the acceptance criteria in mind: the
+   plan exists to satisfy them.
+2. Critique the plan for the gaps a structural gate cannot catch:
+   - **Ambiguity** — vague verbs ("handle", "update as needed") a builder would
+     have to re-decide. Name the specific decision left open.
+   - **Coverage of intent** — does each AC's Definition-of-done item actually
+     establish that criterion, or only gesture at it?
+   - **Missing edge cases / risks** — inputs, failure paths, or migrations the
+     plan ignores.
+   - **Test adequacy** — does the test strategy tie to behavior (the ACs), or
+     assert implementation detail?
+   - **Sequencing / change surface** — files or steps that are wrong, missing,
+     or out of order.
+3. Write each finding as an actionable gap: what is missing, where, and what
+   would close it — not just "this is unclear".
+4. Record a verdict (see Output). The loop: if there are Blocking/Important
+   gaps, hand back to `plan` to close them, then re-review; exit when the plan
+   is clean (`passed`/`resolved`) or the developer consciously accepts the
+   remaining gaps (`accepted`).
+
+**Optional second model.** For a genuinely different model's perspective (most
+valuable on a sensitive slice — auth, money, PII, data-integrity, migrations),
+open the other engine's CLI and run this same review skill on the same `.work/`
+artifacts. Optional, never required.
 
 ## Failure modes
 
-- Rubber-stamping — accepting the reviewer's output without triage → every
-  Blocking/Important item gets an explicit Resolution (fold / fix / reject +
-  reason). See `examples/review.md`.
-- Letting the reviewer modify the tree → use only the read-only invocation from
-  the Shared Conventions.
-- Dropping a Blocking item silently → unresolved Blocking items STOP progress and
-  are surfaced to the developer.
-- Skipping a warranted review → if `## Sensitivity` ≠ None, a review is required;
-  `quark check --for build` blocks without a recorded verdict.
+- A vague gap with no fix ("the plan is unclear") → name the specific decision
+  left open and what would close it. See `examples/review.md`.
+- Rubber-stamping — a clean verdict without real critique → every Blocking /
+  Important finding gets a `## Resolutions` entry (fold / fix / reject + reason).
+- Accepting Blocking gaps with no logged rationale → record the decision with
+  `quark gate <TICKET-ID> review --verdict accepted --note "<why>"`; the note is
+  the audit trail.
+- Editing the implementation → review is read-only; you change `review.md` and
+  the verdict only, never the tree.
 
 ## Output
 
-- `.work/<TICKET-ID>/review.md` from `templates/review.md`: the reviewer's
-  findings grouped by severity (Blocking / Important / Minor) with the mode and
-  a timestamp, plus a `## Resolutions` entry for each blocking/important item.
-  See `examples/review.md`.
+- `.work/<TICKET-ID>/review.md` from `templates/review.md`: findings grouped by
+  severity (Blocking / Important / Minor) with a `## Resolutions` entry for each
+  Blocking/Important item. See `examples/review.md`.
+- A recorded verdict: `quark gate <TICKET-ID> review --verdict
+  <passed|resolved|accepted> [--by "<name>"] [--note "<why>"]`. `passed` = no
+  gaps; `resolved` = gaps closed via the plan ⇄ review loop; `accepted` = gaps
+  consciously accepted (note required). The verdict binds to the current plan
+  hash, so a later plan edit forces a re-review.
 
 ## Self-check
 
 Run `quark check <TICKET-ID>` and confirm `review.md` reports OK and that no
-Blocking item is left without a resolution.
+Blocking item is left without a Resolution.
 
 ## Handoff
 
 Update `.work/<TICKET-ID>/state.md`: current step `review`, status `done` (or
-`blocked` if blocking items are unresolved), next action `build`.
+`blocked` if Blocking gaps stand), next action `build` — or back to `plan` if
+gaps need closing.
 
-Then tell the developer: `review` is done — start a new session and run
-`quark-build`.
+Then tell the developer: `review` is done — start a fresh session and run
+`quark-build` (or `quark-plan` to close gaps first).

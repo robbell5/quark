@@ -10,11 +10,12 @@
 
 ## Test strategy
 
-- <behavior> — <test type; TDD yes/no>
+- (ACn if applicable) <behavior> — <test type; TDD yes/no>
 
 ## Definition of done
 
-- [ ] <checks derived from the acceptance criteria>
+- [ ] (ACn) <check that satisfies acceptance criterion n>
+- [ ] <general quality gate, e.g. node --test passes>
 
 ## Risks & mitigations
 

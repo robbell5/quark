@@ -1,6 +1,6 @@
 ---
 name: quark-{{STEP}}
-description: "Quark {{STEP}} step (Claude Code driver; Codex reviews)"
+description: "Quark {{STEP}} step (Claude Code)"
 argument-hint: "<ticket-id-or-description>"
 disable-model-invocation: true
 ---
@@ -9,6 +9,7 @@ disable-model-invocation: true
 
 You are running the Quark `{{STEP}}` step in **Claude Code**.
 
-- Your engine: Claude Code. The review engine is **Codex**, invoked via the
-  `codex` CLI as described in the Shared Conventions below.
+- Your engine: Claude Code. Review runs natively here — no headless call to
+  another engine. For an optional second opinion from a different model, run the
+  same review skill in Codex on the same `.work/` artifacts.
 - Ticket / input: $ARGUMENTS

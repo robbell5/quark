@@ -1,7 +1,7 @@
 # Review: <TICKET-ID>
 
-Mode: <plan | diff> review — <ISO-8601 timestamp>
-Reviewer: <Codex | Claude Code | self (fallback)>
+Plan review (native) — <ISO-8601 timestamp>
+Reviewer: <self | optional second model>
 
 ## Blocking
 

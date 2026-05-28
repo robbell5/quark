@@ -48,12 +48,21 @@ fills. Quark fights it with a fresh session per step and a file-based handoff
 the baton the next step reads. The session boundary *is* the context-isolation
 mechanism.
 
-## One loop, two engines
+## One loop, two engines — usable with either alone
 
 The same loop runs natively on Claude Code and Codex. The developer can switch
-the primary engine mid-ticket without losing context (the handoff is on disk),
-and the *other* engine performs the read-only review. Anything that ties the
-loop to one engine's dispatch primitive is rejected for breaking this.
+the primary engine mid-ticket without losing context (the handoff is on disk).
+Review is **native** — it runs in whichever engine is driving, as a fresh
+cold-start session — so the harness is fully usable with **only one engine
+installed**. A second engine is *optional*: run the same review skill there on
+the same `.work/` artifacts for an independent model's eyes.
+
+This is a deliberate change from an earlier design that shelled out to the
+*other* engine headlessly for review. That silently required both engines and
+leaned on metered headless invocations; the cold-start native review keeps the
+independence (the reviewer hasn't seen the planning rationale) without the
+coupling. Anything that ties the loop to one engine's dispatch primitive — or
+that *requires* both engines — is rejected for breaking this.
 
 ## Prime directive: port principles, not machinery
 

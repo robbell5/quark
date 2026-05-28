@@ -2,7 +2,7 @@
 
 Manual acceptance walkthrough, mapped to the acceptance criteria.
 
-- [ ] <step the developer performs> → <expected result>
+- [ ] (ACn) <step the developer performs> → <expected result>
 
 ## Result
 

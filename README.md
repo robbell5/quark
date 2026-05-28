@@ -6,7 +6,7 @@ ambiguity before any code is written — confirm scope, close open questions,
 and produce a reliable, reviewed plan — then execute that plan faithfully,
 confirm acceptance criteria, strip the ephemeral planning docs, and open a PR.
 
-Status: active — v0.5.0. Installable and dogfooded.
+Status: active — v0.9.0. Installable and dogfooded.
 
 ## Layout
 
@@ -26,9 +26,9 @@ Status: active — v0.5.0. Installable and dogfooded.
 ## Requirements
 
 - Node.js ≥ 18.
-- The `claude` (Claude Code) and/or `codex` (OpenAI Codex) CLIs for whichever
-  engines you drive. Cross-engine review degrades gracefully to a labeled
-  self-review when the other CLI is absent.
+- The `claude` (Claude Code) or `codex` (OpenAI Codex) CLI — **either one is
+  enough**. Review runs natively in whichever engine you drive; a second engine
+  is optional, for an independent model's review on the same artifacts.
 - A global install (`npm i -g github:robbell5/quark`) puts `quark` on `PATH`
   so the `quark check` precondition gate works inside each step.
 
@@ -81,7 +81,7 @@ Safe to re-run.
 
 ## The loop
 
-Per ticket: `/quark-frame <ticket>` → `/quark-plan` → (`/quark-review`) →
+Per ticket: `/quark-frame <ticket>` → `/quark-plan` → `/quark-review` →
 `/quark-build` → `/quark-verify` → `/quark-ship` on Claude Code; the same steps
 are `$quark-frame <ticket>` … `$quark-ship` on Codex.
 

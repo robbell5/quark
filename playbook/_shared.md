@@ -1,8 +1,8 @@
 # Quark — Shared Conventions
 
 Every Quark step reads this file first. It defines where artifacts live, the
-`state.md` format, the cross-cutting principles, and how to invoke the other
-engine for review.
+`state.md` format, the cross-cutting principles, and how the native review
+works.
 
 ## Working directory
 
@@ -11,9 +11,9 @@ PR:
 
 ```text
 <repo>/.work/<TICKET-ID>/
-  context.md   # intent, acceptance criteria, files in play, risks, out-of-scope
-  plan.md      # file-by-file approach, test strategy, definition-of-done
-  review.md    # the other engine's plan and diff critique, plus resolutions
+  context.md   # intent, acceptance criteria (ACn ids), files, risks, scope
+  plan.md      # file-by-file approach, test strategy, DoD (each item cites ACn)
+  review.md    # native plan critique — structured gaps + resolutions
   state.md     # running progress log — the resume point ("the baton")
   uat.md       # manual acceptance steps
   pr.md        # draft PR body (written by ship)
@@ -55,8 +55,10 @@ carries the plan hash it cleared, so a later plan edit invalidates them:
 
 - `gate_plan_approved: <name> @ <ts> hash=<h>` — the developer's plan approval.
   Required by `quark check --for build`.
-- `gate_review: <passed|resolved|fallback-approved> … hash=<h>` — the review
-  outcome. Required for build on a sensitive slice.
+- `gate_review: <passed|resolved|accepted> … hash=<h>` — the review outcome:
+  `passed` (no gaps), `resolved` (gaps closed via the plan ⇄ review loop), or
+  `accepted` (gaps consciously accepted, with a note). Required by
+  `quark check --for build` for every slice.
 
 ## Cold start: orient before you act
 
@@ -133,61 +135,31 @@ The filled `examples/` artifacts (`context.md`, `plan.md`, `state.md`) show the
 target an agent should imitate; `examples/plan-too-vague.md` shows the failure
 mode to avoid.
 
-## Reviewer invocations (cross-engine, read-only)
+**Acceptance-criterion linkage.** Each acceptance criterion in `context.md`
+carries a stable id (`- AC1: …`). Plan Definition-of-done items and UAT steps
+cite the criterion they satisfy as `(AC1)` / `(AC1, AC2)`. The gate enforces the
+*linkage* — every AC is covered, every `(ACn)` resolves — not prose quality;
+judging whether a covering item is genuinely executable is the planner's
+self-check and the reviewer's job.
 
-The reviewing engine reads the relevant `.work/` files **by path** and returns
-concerns by severity (blocking / important / minor). It must not modify the
-tree. Capture its output into `review.md`.
+## Review is native (single-engine by default)
 
-> Flags below were confirmed on 2026-05-24 against Codex CLI 0.133.0 and Claude
-> Code 2.1.150. Two Codex flags differ from the early draft and are noted inline.
+Review runs in **the engine you are already driving** — a fresh, cold-start
+session, with no headless call to the other engine. The reviewer reads
+`context.md` + `plan.md` (and, in `verify`, the working git diff) and writes
+structured, actionable gaps into `review.md`. It is read-only with respect to
+the implementation: it changes `review.md` and the recorded verdict, nothing
+else.
 
-When **Claude Code** is driving, the reviewer is **Codex**:
+Build is gated on a recorded review verdict (`passed` / `resolved` / `accepted`)
+whose plan hash matches the current plan, so a later plan edit forces a
+re-review. The independence comes from the cold start — the reviewer has not
+seen the planning rationale and judges the plan on its face — not from running a
+different model. This keeps Quark fully usable with **only one engine
+installed**; nothing in the loop depends on both being present.
 
-```bash
-# Plan review (pre-build). codex exec is non-interactive and read-only here;
-# it has no --ask-for-approval flag (that is interactive-only), so the
-# read-only sandbox is the safety mechanism.
-codex exec --sandbox read-only \
-  "Review the Quark plan for <TICKET-ID>. Read .work/<TICKET-ID>/context.md and
-   .work/<TICKET-ID>/plan.md. List concerns by severity
-   (blocking/important/minor) with concrete reasoning. Do not modify files."
-
-# Diff review (post-build). codex review is non-interactive and read-only;
-# --uncommitted reviews staged, unstaged, and untracked working changes.
-codex review --uncommitted \
-  "Review the working git diff against .work/<TICKET-ID>/plan.md and
-   .work/<TICKET-ID>/context.md. List concerns by severity."
-```
-
-When **Codex** is driving, the reviewer is **Claude Code**:
-
-```bash
-# Read-only: -p is non-interactive and --allowedTools whitelists read and
-# git-inspection tools only, so the reviewer cannot edit, write, run other
-# commands, or be prompted for approval (non-interactive mode auto-denies
-# anything not whitelisted, so no --permission-mode is needed). Two prompts,
-# mirroring the Codex block.
-
-# Plan review (pre-build):
-claude -p "Review the Quark plan for <TICKET-ID>. Read
-  .work/<TICKET-ID>/context.md and .work/<TICKET-ID>/plan.md. List concerns by
-  severity (blocking/important/minor) with concrete reasoning." \
-  --output-format text \
-  --allowedTools "Read Grep Glob Bash(git diff:*) Bash(git log:*)"
-
-# Diff review (post-build):
-claude -p "Review the working git diff (git diff) against
-  .work/<TICKET-ID>/plan.md and .work/<TICKET-ID>/context.md. List concerns by
-  severity (blocking/important/minor)." \
-  --output-format text \
-  --allowedTools "Read Grep Glob Bash(git diff:*) Bash(git log:*)"
-```
-
-**Fallback:** if the other engine's CLI is not installed or not authenticated
-(the command errors), record that in `review.md` and perform a same-engine
-self-review instead, clearly labeled as a weaker substitute. On a **sensitive**
-slice (`## Sensitivity` ≠ None) a same-engine fallback weakens the
-independent-review control, so it must be consciously accepted by the developer
-and recorded with `quark gate <TICKET-ID> review --verdict fallback-approved --by
-"<name>"`; otherwise `quark check --for build` blocks.
+**Optional second model.** To add a genuinely different model's perspective
+(most valuable on a sensitive slice — auth, money, PII, data-integrity,
+migrations), open the *other* engine's CLI and run the same review skill on the
+same `.work/` artifacts; it reads the portable files and appends its findings.
+This is a choice, never a requirement.

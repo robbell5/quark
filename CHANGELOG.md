@@ -5,6 +5,36 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.9.0] - 2026-05-28
+
+### Added
+
+- **Acceptance-criterion traceability spine.** Each criterion in `context.md`
+  carries a stable id (`- AC1: …`); plan Definition-of-done items and UAT steps
+  cite the criterion they satisfy as `(AC1)` / `(AC1, AC2)`. `quark check`
+  enforces the linkage — every AC covered, every `(ACn)` resolves — at the
+  `review`/`build` gates (plan) and the `ship` gate (UAT). It checks linkage,
+  not prose; semantic judgment stays with the planner and the reviewer.
+- **`accepted` review verdict.** Records consciously-accepted plan gaps (with a
+  note) so the plan ⇄ review loop has an explicit exit. `runGate` validates the
+  verdict against `REVIEW_VERDICTS` and rejects typos with exit 2.
+
+### Changed
+
+- **Review is native and single-engine.** The `review` step no longer shells out
+  headlessly to the other engine (`codex exec` / `claude -p`). It runs a fresh,
+  cold-start critique in whichever engine is driving and writes structured,
+  actionable gaps to `review.md`. Quark is now fully usable with only one engine
+  installed; a second engine is an optional second-model pass on the same
+  artifacts. The post-build diff critique folds natively into `verify`.
+- **Review verdict required for every build**, not just sensitive slices (review
+  is cheap now, and the `accepted` verdict keeps it low-friction).
+
+### Removed
+
+- **`fallback-approved` verdict** and the cross-engine reviewer-fallback rule —
+  obsolete once review is always native.
+
 ## [0.8.0] - 2026-05-28
 
 ### Added

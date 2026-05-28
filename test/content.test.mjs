@@ -33,9 +33,12 @@ test("loop shims carry STEP and no clone path; only Claude uses $ARGUMENTS", () 
   );
 });
 
-test("claude shim names Codex reviewer; codex shim names Claude", () => {
-  assert.ok(/Codex/.test(read("shims/claude.md")));
-  assert.ok(/Claude Code/.test(read("shims/codex.md")));
+test("loop shims mention the optional cross-engine second opinion", () => {
+  assert.ok(/Codex/.test(read("shims/claude.md")), "claude shim names Codex");
+  assert.ok(
+    /Claude Code/.test(read("shims/codex.md")),
+    "codex shim names Claude Code",
+  );
 });
 
 test("claude loop frontmatter: name, description, argument-hint, explicit-only", () => {
@@ -62,11 +65,15 @@ test("codex loop frontmatter is minimal: name + description, no Claude-only fiel
   assert.ok(!tpl.includes("argument-hint:"), "codex: no argument-hint");
 });
 
-test("_shared.md documents both reviewer invocations and the fallback", () => {
+test("_shared.md describes native review, not headless cross-engine calls", () => {
   const shared = read("playbook/_shared.md");
-  assert.ok(shared.includes("codex exec"));
-  assert.ok(shared.includes("claude -p"));
-  assert.ok(/fallback/i.test(shared));
+  assert.ok(!shared.includes("codex exec"), "no headless codex exec");
+  assert.ok(!shared.includes("claude -p"), "no headless claude -p");
+  assert.ok(/native/i.test(shared), "must describe native review");
+  assert.ok(
+    /only one engine\s+installed/i.test(shared),
+    "must state single-engine usability",
+  );
 });
 
 test("_shared.md carries the cold-start orientation block", () => {
@@ -322,10 +329,17 @@ test("plan records approval through the gate", () => {
   assert.ok(/approv/i.test(plan));
 });
 
-test("review routes by sensitivity and guards the fallback", () => {
+test("review is native, records a verdict, and has no headless fallback", () => {
   const review = read("playbook/review.md");
-  assert.ok(/Sensitivity/.test(review), "review must route off Sensitivity");
-  assert.ok(/fallback-approved/.test(review), "review must guard the fallback");
+  assert.ok(!/fallback-approved/.test(review), "fallback-approved is retired");
+  assert.ok(
+    !/codex exec/.test(review) && !/claude -p/.test(review),
+    "review must not shell out to the other engine",
+  );
+  assert.ok(
+    /--verdict/.test(review) && /accepted/.test(review),
+    "review records a verdict including the accept-gaps path",
+  );
 });
 
 test("build routes drift back through plan/review", () => {
@@ -345,8 +359,18 @@ test("ship cleans safely and computes a robust base", () => {
   assert.ok(/origin\/HEAD|default branch/.test(ship));
 });
 
-test("_shared documents the gate fields and the sensitive fallback rule", () => {
+test("_shared documents the gate fields and the review verdicts", () => {
   const shared = read("playbook/_shared.md");
   assert.ok(/gate_plan_approved/.test(shared));
-  assert.ok(/fallback-approved/.test(shared));
+  assert.ok(/gate_review/.test(shared));
+  assert.ok(!/fallback-approved/.test(shared), "fallback-approved is retired");
+  assert.ok(/accepted/.test(shared), "documents the accept-gaps verdict");
+});
+
+test("templates and playbooks wire the acceptance-criterion spine", () => {
+  assert.ok(/- AC1:/.test(read("templates/context.md")), "context AC ids");
+  assert.ok(/\(ACn\)/.test(read("templates/plan.md")), "plan DoD cites (ACn)");
+  assert.ok(/\(ACn\)/.test(read("templates/uat.md")), "uat cites (ACn)");
+  assert.ok(/\(ACn\)/.test(read("playbook/plan.md")), "plan teaches (ACn)");
+  assert.ok(/AC1:/.test(read("playbook/frame.md")), "frame assigns AC ids");
 });

@@ -22,25 +22,30 @@ report — `plan.md` must be valid and `state.md` must show `build` complete.
 ## Procedure
 
 1. Read the definition-of-done in `plan.md` and the acceptance criteria in
-   `context.md`, and **map each acceptance criterion** to a concrete check (a
-   gate, a test, or a UAT step) before running anything.
+   `context.md`, and **map each acceptance criterion** (`ACn`) to a concrete
+   check — a gate, a test, or a UAT step — before running anything.
 2. Run the repo's gates, reading the exact commands from the steering doc.
    Record the actual output. If a gate fails, return to `build`; do not proceed.
-3. Write/refresh `.work/<TICKET-ID>/uat.md` from `templates/uat.md`: a short
-   manual walkthrough mapped to the acceptance criteria. Replay it (or have the
-   developer replay it) and record the result (`pass`/`fail`).
-4. Security pass: if `context.md`'s `## Sensitivity` is not `None`, review the
+3. Review the implementation diff yourself (`git diff` against the base) — the
+   same critique the plan review applied, now against real code: does the diff
+   match the plan, are there correctness or quality gaps, untested paths, or
+   drift? Record findings; route real problems back to `build`.
+4. Write/refresh `.work/<TICKET-ID>/uat.md` from `templates/uat.md`: a short
+   manual walkthrough where each step cites the `(ACn)` it exercises. Replay it
+   (or have the developer replay it) and record the result (`pass`/`fail`).
+5. Security pass: if `context.md`'s `## Sensitivity` is not `None`, review the
    diff for the failure modes implied by its categories — authz gaps, injection,
    secret exposure, migration safety — and record findings. Skip only when
    Sensitivity is `None`.
-5. Confirm every definition-of-done item is checked with evidence. Never mark
-   `verify` done on assertion alone.
+6. Confirm every definition-of-done item is checked with evidence, and that the
+   UAT covers every acceptance criterion by id (the `--for ship` gate enforces
+   this next). Never mark `verify` done on assertion alone.
 
 ## Failure modes
 
 - Claiming a gate passed without the output → run it; record the actual result.
-- A UAT walkthrough that doesn't map to the acceptance criteria → each step names
-  the criterion it exercises (see `examples/uat.md`).
+- A UAT walkthrough that doesn't map to the acceptance criteria → each step
+  cites the `(ACn)` it exercises (see `examples/uat.md`).
 - Skipping the security pass on a sensitive slice → when `## Sensitivity` ≠
   `None`, the security pass is required; skip only when Sensitivity is `None`.
 

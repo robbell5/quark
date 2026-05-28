@@ -27,8 +27,10 @@ None — `frame` is the entry step.
 3. Read the steering doc and the code in play before writing anything.
 4. Write `.work/<TICKET-ID>/context.md` from `templates/context.md`, filling
    intent, acceptance criteria, the specific files/modules in play, constraints,
-   risks, and explicit out-of-scope items. Write `None` in any genuinely empty
-   section; never leave one blank.
+   risks, and explicit out-of-scope items. Give each acceptance criterion a
+   stable id — `- AC1: …`, `- AC2: …`, sequential from 1 — so the plan and UAT
+   can cite it; downstream artifacts reference these ids, so don't renumber them
+   later. Write `None` in any genuinely empty section; never leave one blank.
 5. Confirm scope with the developer in one or two sentences — what this ticket
    does and does not include.
 6. Classify sensitivity: fill `## Sensitivity` in `context.md` with the
@@ -45,6 +47,9 @@ None — `frame` is the entry step.
 
 - Inventing requirements not traceable to the ticket → every acceptance
   criterion maps to ticket text or an explicit developer answer.
+- An acceptance criterion that can't be checked → write each as something a
+  later UAT step or test can reproduce, since plan and verify must cover it by
+  `(ACn)`.
 - Asking what you could read → reserve open questions for genuine judgment
   calls; determine the rest from the code (see Eliciting decisions).
 - Silent scope creep → fill `## Out of scope` deliberately, not as an

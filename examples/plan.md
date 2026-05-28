@@ -16,13 +16,16 @@ the existing table path unchanged.
 
 ## Test strategy
 
-- `status --json` emits parseable JSON with id/state/updated — unit test; TDD yes.
-- default `status` output is unchanged — characterization test; TDD no (pin first).
+- (AC1, AC2) `status --json` emits parseable JSON with id/state/updated — unit
+  test; TDD yes.
+- (AC3) default `status` output is unchanged — characterization test; TDD no
+  (pin first).
 
 ## Definition of done
 
-- [ ] `status --json` prints a JSON object with id, state, updated and exits 0.
-- [ ] default `status` output is byte-for-byte unchanged (pinned by a test).
+- [ ] (AC1) `status --json` prints a single JSON object and exits 0.
+- [ ] (AC2) the JSON includes id, state, and updated (every table field).
+- [ ] (AC3) default `status` output is byte-for-byte unchanged (pinned by a test).
 - [ ] `node --test` passes.
 
 ## Risks & mitigations

@@ -26,14 +26,20 @@ Run `quark check <TICKET-ID> --for plan`. If it exits non-zero, STOP and report 
    the rest as risks. Do not paper over an unknown.
 2. Write `.work/<TICKET-ID>/plan.md` from `templates/plan.md`:
    - a file-by-file list of changes (exact paths, what changes in each);
-   - the test strategy — which behaviors get tests, and whether to use TDD
-     (required for logic-heavy or financial slices: ownership math, money,
-     derivations, auth);
-   - a definition-of-done checklist derived directly from `context.md`'s
-     acceptance criteria;
+   - the test strategy — which behaviors get tests (cite the `(ACn)` each
+     exercises), and whether to use TDD (required for logic-heavy or financial
+     slices: ownership math, money, derivations, auth);
+   - a definition-of-done checklist that covers every acceptance criterion: each
+     item that satisfies a criterion cites it as `(ACn)`, and every `ACn` in
+     `context.md` is covered by at least one item (general quality gates such as
+     "node --test passes" need no citation);
    - risks and how the plan mitigates them.
 3. Keep the plan concrete — an engineer should execute it without re-deriving
-   decisions. No "handle edge cases" hand-waving: name them.
+   decisions. No "handle edge cases" hand-waving: name them. Then self-check:
+   re-read each Definition-of-done item — is it checkable, and does it cite the
+   `(ACn)` it satisfies? Is every acceptance criterion covered? Scan Approach and
+   Changes for vague verbs ("handle", "manage", "as needed") and replace each
+   with a concrete action.
 
 ## Failure modes
 
@@ -53,7 +59,9 @@ Run `quark check <TICKET-ID> --for plan`. If it exits non-zero, STOP and report 
 
 ## Self-check
 
-Run `quark check <TICKET-ID>` and confirm `plan.md` reports OK, then present the
+Run `quark check <TICKET-ID>` and confirm `plan.md` reports OK, then run
+`quark check <TICKET-ID> --for review` to confirm every acceptance criterion is
+covered by a Definition-of-done item and every `(ACn)` resolves. Present the
 plan to the developer for review. Implementation does not begin until they
 approve: record the approval with `quark gate <TICKET-ID> plan-approved --by
 "<name>"` (the developer may run this themselves). That stamps the plan's hash
@@ -63,9 +71,9 @@ plan invalidates the approval.
 ## Handoff
 
 Update `.work/<TICKET-ID>/state.md`: current step `plan`, status `done`, next
-action `review` (sensitive slices) or `build` — but note that `build` will not
-start until the plan is approved (and, for sensitive slices, reviewed).
+action `review` — but note that `build` will not start until the plan is
+approved and a review verdict is recorded.
 
 Then tell the developer: `plan` is done — record approval with
-`quark gate <TICKET-ID> plan-approved --by "<name>"`, then start a new session and
-run the `review` step (sensitive slices) or `build`.
+`quark gate <TICKET-ID> plan-approved --by "<name>"`, then start a new session
+and run the `review` step.

@@ -12,7 +12,7 @@ gate_plan_approved: Rob Bell @ 2026-05-26T15:35:00Z hash=illustrative1
 ## Completed
 
 - frame — context written, scope confirmed, 0 open questions
-- plan — file-by-file plan written and reviewed
+- plan — file-by-file plan written and approved (each DoD item cites its AC)
 
 ## Decisions & deviations
 
@@ -20,7 +20,7 @@ gate_plan_approved: Rob Bell @ 2026-05-26T15:35:00Z hash=illustrative1
 
 ## Next action
 
-- Run the plan through build; TDD the `--json` behavior first.
+- Run the `review` step, then build (TDD the `--json` behavior first).
 
 ## Gotchas for the next runner
 

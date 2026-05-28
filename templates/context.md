@@ -6,7 +6,8 @@
 
 ## Acceptance criteria
 
-- <criterion>
+- AC1: <criterion>
+- AC2: <criterion>
 
 ## Files / modules in play
 

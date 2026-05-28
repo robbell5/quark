@@ -16,6 +16,8 @@ import {
   batonSummary,
   planHash,
   setFrontmatterField,
+  parseAcIds,
+  collectAcRefs,
 } from "../src/check.mjs";
 import { STEPS } from "../src/lib.mjs";
 
@@ -100,7 +102,7 @@ const goodContext = [
   "",
   "## Acceptance criteria",
   "",
-  "- prints JSON",
+  "- AC1: prints JSON",
   "",
   "## Files / modules in play",
   "",
@@ -151,7 +153,7 @@ test("validateArtifact flags an empty required section (use None)", () => {
 });
 
 test("validateArtifact enforces minItems", () => {
-  const text = goodContext.replace("- prints JSON", "prose, no list item");
+  const text = goodContext.replace("- AC1: prints JSON", "prose, no list item");
   const { errors } = validateArtifact("context", text, SCHEMAS.context);
   assert.ok(errors.some((e) => e.includes("Acceptance criteria")));
 });
@@ -245,7 +247,7 @@ test("validateArtifact validates state frontmatter keys and enums", () => {
 
 test("validateArtifact does not double-report a missing minItems section", () => {
   const text = goodContext.replace(
-    "## Acceptance criteria\n\n- prints JSON\n\n",
+    "## Acceptance criteria\n\n- AC1: prints JSON\n\n",
     "",
   );
   const { errors } = validateArtifact("context", text, SCHEMAS.context);
@@ -265,6 +267,21 @@ test("validateArtifact flags an H1 with no id", () => {
   assert.ok(errors.some((e) => e.includes("H1")));
 });
 
+test("validateArtifact flags an acceptance criterion missing its ACn: id", () => {
+  const text = goodContext.replace("- AC1: prints JSON", "- prints JSON");
+  const { errors } = validateArtifact("context", text, SCHEMAS.context);
+  assert.ok(errors.some((e) => /lacks an "ACn:" id/.test(e)));
+});
+
+test("validateArtifact flags duplicate acceptance-criterion ids", () => {
+  const text = goodContext.replace(
+    "- AC1: prints JSON",
+    "- AC1: prints JSON\n- AC1: prints again",
+  );
+  const { errors } = validateArtifact("context", text, SCHEMAS.context);
+  assert.ok(errors.some((e) => /duplicate acceptance-criterion id AC1/.test(e)));
+});
+
 const goodPlan = [
   "# Plan: RAY-001",
   "",
@@ -282,7 +299,7 @@ const goodPlan = [
   "",
   "## Definition of done",
   "",
-  "- [ ] flag works",
+  "- [ ] (AC1) flag works",
   "",
   "## Risks & mitigations",
   "",
@@ -466,10 +483,15 @@ test("runCheck (artifact mode) fails and reports a malformed artifact", () => {
 });
 
 test("runCheck (readiness mode) honors --for build", () => {
-  const state = setFrontmatterField(
+  let state = setFrontmatterField(
     goodState,
     "gate_plan_approved",
     `Dev @ 2026-05-27T00:00:00Z hash=${planHash(goodPlan)}`,
+  );
+  state = setFrontmatterField(
+    state,
+    "gate_review",
+    `resolved hash=${planHash(goodPlan)}`,
   );
   const cwd = repoWith({ context: goodContext, plan: goodPlan, state });
   const res = runCheck({ ticket: "RAY-001", step: "build", cwd });
@@ -569,20 +591,6 @@ test("checkReadiness --for build blocks when the plan changed since approval", (
   assert.ok(errors.some((e) => /changed since approval/i.test(e)));
 });
 
-test("checkReadiness --for build passes a fresh approval on a non-sensitive slice", () => {
-  const dir = workdir({
-    context: goodContext,
-    plan: goodPlan,
-    state: approvedState(goodPlan),
-  });
-  assert.deepEqual(checkReadiness(dir, "build").errors, []);
-});
-
-const sensitiveContext = goodContext.replace(
-  "## Sensitivity\n\nNone",
-  "## Sensitivity\n\n- auth",
-);
-
 const cleanReview = [
   "# Review: RAY-001",
   "",
@@ -603,60 +611,49 @@ const cleanReview = [
   "None",
 ].join("\n");
 
-const sensitiveState = (planText, reviewValue) => {
-  let s = approvedState(planText);
-  if (reviewValue !== undefined) s = setFrontmatterField(s, "gate_review", reviewValue);
-  return s;
-};
+const reviewedState = (planText, verdict = `resolved hash=${planHash(planText)}`) =>
+  setFrontmatterField(approvedState(planText), "gate_review", verdict);
 
-test("build blocks a sensitive slice with no review", () => {
+test("checkReadiness --for build blocks an approved plan with no review verdict", () => {
   const dir = workdir({
-    context: sensitiveContext,
+    context: goodContext,
     plan: goodPlan,
-    state: sensitiveState(goodPlan, `resolved hash=${planHash(goodPlan)}`),
-  });
-  const { errors } = checkReadiness(dir, "build");
-  assert.ok(errors.some((e) => /sensitive slice requires a review/i.test(e)));
-});
-
-test("build blocks a sensitive slice with no recorded verdict", () => {
-  const dir = workdir({
-    context: sensitiveContext,
-    plan: goodPlan,
-    review: cleanReview,
-    state: sensitiveState(goodPlan), // no gate_review
+    state: approvedState(goodPlan),
   });
   const { errors } = checkReadiness(dir, "build");
   assert.ok(errors.some((e) => /recorded review verdict/i.test(e)));
 });
 
-test("build blocks a sensitive slice whose review predates a plan change", () => {
+test("checkReadiness --for build passes an approved + reviewed slice", () => {
   const dir = workdir({
-    context: sensitiveContext,
+    context: goodContext,
     plan: goodPlan,
     review: cleanReview,
-    state: sensitiveState(goodPlan, "resolved hash=deadbeef0000"),
+    state: reviewedState(goodPlan),
+  });
+  assert.deepEqual(checkReadiness(dir, "build").errors, []);
+});
+
+test("checkReadiness --for build blocks when the review predates a plan change", () => {
+  const dir = workdir({
+    context: goodContext,
+    plan: goodPlan,
+    review: cleanReview,
+    state: reviewedState(goodPlan, "resolved hash=deadbeef0000"),
   });
   const { errors } = checkReadiness(dir, "build");
   assert.ok(errors.some((e) => /changed since review/i.test(e)));
 });
 
-test("build passes a sensitive slice with a fresh, real review", () => {
+test("checkReadiness --for build accepts the 'accepted' accept-gaps verdict", () => {
   const dir = workdir({
-    context: sensitiveContext,
+    context: goodContext,
     plan: goodPlan,
     review: cleanReview,
-    state: sensitiveState(goodPlan, `resolved hash=${planHash(goodPlan)}`),
-  });
-  assert.deepEqual(checkReadiness(dir, "build").errors, []);
-});
-
-test("build accepts fallback-approved as a real verdict on a sensitive slice", () => {
-  const dir = workdir({
-    context: sensitiveContext,
-    plan: goodPlan,
-    review: cleanReview,
-    state: sensitiveState(goodPlan, `fallback-approved — by Dev hash=${planHash(goodPlan)}`),
+    state: reviewedState(
+      goodPlan,
+      `accepted — by Dev (edge case deferred) hash=${planHash(goodPlan)}`,
+    ),
   });
   assert.deepEqual(checkReadiness(dir, "build").errors, []);
 });
@@ -699,4 +696,163 @@ test("runGate returns code 2 without plan.md", () => {
 test("runGate returns code 2 for an unknown gate", () => {
   const cwd = repoWith({ plan: goodPlan, state: goodState });
   assert.equal(runGate({ ticket: "RAY-001", gate: "bogus", cwd }).code, 2);
+});
+
+test("runGate rejects an unknown review verdict with code 2", () => {
+  const cwd = repoWith({ plan: goodPlan, state: goodState });
+  const res = runGate({ ticket: "RAY-001", gate: "review", verdict: "accpeted", cwd });
+  assert.equal(res.code, 2);
+  assert.ok(res.lines.some((l) => /unknown review verdict/.test(l)));
+});
+
+test("runGate stamps the accepted verdict with a by and note", () => {
+  const cwd = repoWith({ plan: goodPlan, state: goodState });
+  runGate({
+    ticket: "RAY-001",
+    gate: "review",
+    verdict: "accepted",
+    by: "Rob",
+    note: "edge deferred",
+    cwd,
+  });
+  const fm = parseFrontmatter(
+    fs.readFileSync(path.join(cwd, ".work", "RAY-001", "state.md"), "utf8"),
+  );
+  assert.match(
+    fm.gate_review,
+    /^accepted — by Rob \(edge deferred\) hash=[0-9a-f]{12}$/,
+  );
+});
+
+const acContext = (acLines) =>
+  [
+    "# Context: RAY-001",
+    "",
+    "## Acceptance criteria",
+    "",
+    ...acLines,
+    "",
+    "## Intent",
+    "",
+    "x",
+  ].join("\n");
+
+test("parseAcIds collects well-formed sequential ids", () => {
+  const { ids, errors, warnings } = parseAcIds(
+    acContext(["- AC1: first", "- AC2: second", "- AC3: third"]),
+  );
+  assert.deepEqual(ids, ["AC1", "AC2", "AC3"]);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(warnings, []);
+});
+
+test("parseAcIds rejects a bare bullet with no id", () => {
+  const { errors } = parseAcIds(acContext(["- no id here"]));
+  assert.ok(errors.some((e) => /lacks an "ACn:" id/.test(e)));
+});
+
+test("parseAcIds flags a duplicate id", () => {
+  const { errors } = parseAcIds(acContext(["- AC1: a", "- AC1: b"]));
+  assert.ok(errors.some((e) => /duplicate acceptance-criterion id AC1/.test(e)));
+});
+
+test("parseAcIds warns (not errors) on non-sequential ids", () => {
+  const { ids, errors, warnings } = parseAcIds(
+    acContext(["- AC1: a", "- AC3: c"]),
+  );
+  assert.deepEqual(ids, ["AC1", "AC3"]);
+  assert.deepEqual(errors, []);
+  assert.ok(warnings.some((w) => /not 1\.\.N sequential/.test(w)));
+});
+
+test("collectAcRefs parses single, comma, and adjacent ref forms", () => {
+  assert.deepEqual([...collectAcRefs("- [ ] (AC1) do x")], ["AC1"]);
+  assert.deepEqual(
+    [...collectAcRefs("- [ ] (AC1, AC2) do x")].sort(),
+    ["AC1", "AC2"],
+  );
+  assert.deepEqual([...collectAcRefs("(AC1)(AC3)")].sort(), ["AC1", "AC3"]);
+});
+
+test("collectAcRefs ignores a bare ACn in prose (no parens)", () => {
+  assert.deepEqual([...collectAcRefs("AC1 is tricky to test")], []);
+});
+
+test("checkReadiness --for review flags an AC with no DoD coverage (R1)", () => {
+  const plan = goodPlan.replace("- [ ] (AC1) flag works", "- [ ] flag works");
+  const dir = workdir({ context: goodContext, plan });
+  const { errors } = checkReadiness(dir, "review");
+  assert.ok(errors.some((e) => /AC1 not covered/.test(e)));
+});
+
+test("checkReadiness --for review flags a DoD citing an undefined AC (R2)", () => {
+  const plan = goodPlan.replace("- [ ] (AC1) flag works", "- [ ] (AC2) flag works");
+  const dir = workdir({ context: goodContext, plan });
+  const { errors } = checkReadiness(dir, "review");
+  assert.ok(errors.some((e) => /cites AC2, which is not defined/.test(e)));
+});
+
+test("checkReadiness --for review passes when every AC is covered", () => {
+  const dir = workdir({ context: goodContext, plan: goodPlan });
+  assert.deepEqual(checkReadiness(dir, "review").errors, []);
+});
+
+test("checkReadiness --for build also enforces AC coverage (R1)", () => {
+  const plan = goodPlan.replace("- [ ] (AC1) flag works", "- [ ] flag works");
+  const dir = workdir({ context: goodContext, plan, state: approvedState(plan) });
+  const { errors } = checkReadiness(dir, "build");
+  assert.ok(errors.some((e) => /AC1 not covered/.test(e)));
+});
+
+test("worked-example plan covers + resolves every AC via the review gate", () => {
+  const ctx = fs.readFileSync(path.join(root, "examples", "context.md"), "utf8");
+  const plan = fs.readFileSync(path.join(root, "examples", "plan.md"), "utf8");
+  const dir = workdir({ context: ctx, plan });
+  const { errors } = checkReadiness(dir, "review");
+  assert.deepEqual(errors, [], errors.join("; "));
+});
+
+test("checkReadiness --for ship flags an AC with no UAT coverage (R3)", () => {
+  const uat = "# UAT: RAY-001\n\n- [x] step → ok\n\n## Result\n\npass";
+  const dir = workdir({ context: goodContext, uat });
+  const { errors } = checkReadiness(dir, "ship");
+  assert.ok(errors.some((e) => /AC1 not covered/.test(e)));
+});
+
+test("checkReadiness --for ship flags UAT citing an undefined AC (R4)", () => {
+  const uat = "# UAT: RAY-001\n\n- [x] (AC1)(AC9) step → ok\n\n## Result\n\npass";
+  const dir = workdir({ context: goodContext, uat });
+  const { errors } = checkReadiness(dir, "ship");
+  assert.ok(errors.some((e) => /cites AC9, which is not defined/.test(e)));
+});
+
+test("checkReadiness --for ship passes when UAT covers every AC", () => {
+  const uat = "# UAT: RAY-001\n\n- [x] (AC1) step → ok\n\n## Result\n\npass";
+  const dir = workdir({ context: goodContext, uat });
+  assert.deepEqual(checkReadiness(dir, "ship").errors, []);
+});
+
+test("checkReadiness --for ship no-ops AC coverage when context is absent", () => {
+  const uat = "# UAT: RAY-001\n\n- [x] step → ok\n\n## Result\n\npass";
+  const dir = workdir({ uat });
+  assert.deepEqual(checkReadiness(dir, "ship").errors, []);
+});
+
+test("worked-example UAT covers every AC via the ship gate", () => {
+  const ctx = fs.readFileSync(path.join(root, "examples", "context.md"), "utf8");
+  const uat = fs.readFileSync(path.join(root, "examples", "uat.md"), "utf8");
+  const dir = workdir({ context: ctx, uat });
+  const { errors } = checkReadiness(dir, "ship");
+  assert.deepEqual(errors, [], errors.join("; "));
+});
+
+test("the vague anti-example fails AC coverage at the review gate", () => {
+  const ctx = fs.readFileSync(path.join(root, "examples", "context.md"), "utf8");
+  const plan = fs.readFileSync(
+    path.join(root, "examples", "plan-too-vague.md"),
+    "utf8",
+  );
+  const dir = workdir({ context: ctx, plan });
+  const { errors } = checkReadiness(dir, "review");
+  assert.ok(errors.some((e) => /not covered by any Definition-of-done/.test(e)));
 });

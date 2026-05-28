@@ -17,7 +17,7 @@ style every step playbook follows.
 
 ## Status
 
-Active — v0.8.0. The harness is built, tested (`node --test`), and installable
+Active — v0.9.0. The harness is built, tested (`node --test`), and installable
 via `npx github:robbell5/quark install` (or `node bin/quark install` from a
 clone). It installs as **Agent Skills** on both engines —
 `~/.claude/skills/quark-*/` and `~/.agents/skills/quark-*/`, explicit-invocation
@@ -26,7 +26,7 @@ only. The product is the Markdown in `playbook/`; the installer is plumbing.
 ## Layout
 
 - `playbook/` — the product. `_shared.md` (artifact schema, `state.md` format,
-  cold-start orientation, principles, reviewer invocations) plus the six step
+  cold-start orientation, principles, native review) plus the six step
   files: `frame.md`,
   `plan.md`, `review.md`, `build.md`, `verify.md`, `ship.md`. Plus `config.md`,
   the `/quark-config` utility playbook.
@@ -43,7 +43,8 @@ only. The product is the Markdown in `playbook/`; the installer is plumbing.
   `composeCommand`, `installEngine`, `uninstallEngine`, `sweepLegacy`,
   `engineTargets`, `parseArgs`, `install`, `uninstall`.
 - `src/check.mjs` — the `quark check` validator: `SCHEMAS` contract,
-  `parseSections`, `parseFrontmatter`, `validateArtifact`, `planHash`,
+  `REVIEW_VERDICTS`, `parseSections`, `parseFrontmatter`, `validateArtifact`,
+  `parseAcIds`, `collectAcRefs`, `acCoverage` (the AC linkage spine), `planHash`,
   `setFrontmatterField`, `checkReadiness`, `runCheck`, `runGate`,
   `batonSummary`.
 - `bin/quark` — the CLI entry (`install` / `uninstall` / `check` / `gate`) that

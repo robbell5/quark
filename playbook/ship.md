@@ -13,7 +13,8 @@ in the diff. The tracker stays the source of truth; the PR points back to it.
 ## Precondition
 
 Run `quark check <TICKET-ID> --for ship`. If it exits non-zero, STOP and
-report — `uat.md` must show a passing result before shipping.
+report — `uat.md` must show a passing result and cover every acceptance
+criterion (`ACn`) before shipping.
 
 ## Procedure
 
