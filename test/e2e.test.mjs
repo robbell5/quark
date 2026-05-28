@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { STEPS, UTILITIES, installEngine, engineTargets } from "../src/lib.mjs";
+import { STEPS, UTILITIES, installEngine, installEngineAgents, engineTargets } from "../src/lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -12,7 +12,7 @@ test("end-to-end: self-contained skills land in both engine dirs", () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "quark-home-"));
   const targets = engineTargets(home);
   for (const engine of ["claude", "codex"]) {
-    const { loopTemplate, configTemplate, outDir, sidecar } = targets[engine];
+    const { loopTemplate, configTemplate, agentTemplate, outDir, agentsDir, sidecar } = targets[engine];
     const loopHeader = fs.readFileSync(path.join(root, loopTemplate), "utf8");
     const configHeader = fs.readFileSync(path.join(root, configTemplate), "utf8");
     const resolvedSidecar = sidecar
@@ -37,6 +37,9 @@ test("end-to-end: self-contained skills land in both engine dirs", () => {
       includeShared: false,
       sidecar: resolvedSidecar,
     });
+
+    const agentHeader = fs.readFileSync(path.join(root, agentTemplate), "utf8");
+    installEngineAgents({ shimTemplate: agentHeader, engine, outDir: agentsDir, root });
 
     for (const name of [...STEPS, ...UTILITIES]) {
       const body = fs.readFileSync(
@@ -72,5 +75,12 @@ test("end-to-end: self-contained skills land in both engine dirs", () => {
     } else {
       assert.ok(!fs.existsSync(sidecarPath), "claude skill has no sidecar");
     }
+
+    const agentExt = engine === "codex" ? "toml" : "md";
+    const agentFile = path.join(agentsDir, `quark-explorer.${agentExt}`);
+    assert.ok(fs.existsSync(agentFile), `${engine}: quark-explorer agent file written`);
+    const agentBody = fs.readFileSync(agentFile, "utf8");
+    assert.ok(!agentBody.includes("{{"), `${engine}: agent placeholder left`);
+    assert.ok(agentBody.includes("Relevant files"), `${engine}: explorer body inlined`);
   }
 });

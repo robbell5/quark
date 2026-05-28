@@ -29,7 +29,10 @@ report — `plan.md` must be valid and `state.md` must show `build` complete.
 3. Review the implementation diff yourself (`git diff` against the base) — the
    same critique the plan review applied, now against real code: does the diff
    match the plan, are there correctness or quality gaps, untested paths, or
-   drift? Record findings; route real problems back to `build`.
+   drift? Record findings; route real problems back to `build`. For a large
+   diff, dispatch the read-only explorer worker to read the diff against the
+   plan and return discrepancies (see **Delegating to workers** in the Shared
+   Conventions); you judge and record them.
 4. Write/refresh `.work/<TICKET-ID>/uat.md` from `templates/uat.md`: a short
    manual walkthrough where each step cites the `(ACn)` it exercises. Replay it
    (or have the developer replay it) and record the result (`pass`/`fail`).

@@ -2,6 +2,7 @@
 import {
   STEPS,
   UTILITIES,
+  AGENTS,
   resolveQuarkRoot,
   parseArgs,
   engineTargets,
@@ -20,14 +21,16 @@ if (opts.command === "uninstall") {
     for (const engine of opts.engines) {
       console.log(
         `[dry-run] ${engine}: would remove quark skills from ${targets[engine].outDir}` +
+          `, ${AGENTS.length} agent(s) from ${targets[engine].agentsDir}` +
           ` and sweep legacy v0.3.0 files from ${targets[engine].legacyDir}`,
       );
     }
   } else {
-    for (const { engine, outDir, count, legacyRemoved } of uninstall({
+    for (const { engine, outDir, count, agents, legacyRemoved } of uninstall({
       engines: opts.engines,
     })) {
       console.log(`${engine}: removed ${count} skills from ${outDir}`);
+      if (agents) console.log(`${engine}: removed ${agents} agent(s)`);
       if (legacyRemoved) {
         console.log(`${engine}: swept ${legacyRemoved} legacy v0.3.0 files`);
       }
@@ -39,16 +42,18 @@ if (opts.command === "uninstall") {
     for (const engine of opts.engines) {
       console.log(
         `[dry-run] ${engine}: would write ${total} skills to ${targets[engine].outDir}` +
+          `, ${AGENTS.length} agent(s) to ${targets[engine].agentsDir}` +
           ` and sweep legacy v0.3.0 files from ${targets[engine].legacyDir}`,
       );
     }
   } else {
     console.log(`Quark install — root: ${root}`);
-    for (const { engine, outDir, count, legacyRemoved } of install({
+    for (const { engine, outDir, count, agents, legacyRemoved } of install({
       engines: opts.engines,
       root,
     })) {
       console.log(`${engine}: wrote ${count} skills to ${outDir}`);
+      if (agents) console.log(`${engine}: wrote ${agents} agent(s)`);
       if (legacyRemoved) {
         console.log(`${engine}: swept ${legacyRemoved} legacy v0.3.0 files`);
       }

@@ -7,12 +7,17 @@ import { fileURLToPath } from "node:url";
 import {
   STEPS,
   UTILITIES,
+  AGENTS,
   installEngine,
   uninstallEngine,
+  installEngineAgents,
+  uninstallEngineAgents,
   sweepLegacy,
   parseArgs,
   engineTargets,
   composeCommand,
+  composeAgent,
+  parseAgentSpec,
   install,
   uninstall,
 } from "../src/lib.mjs";
@@ -32,6 +37,18 @@ test("STEPS is the canonical six-step loop in order", () => {
 
 test("UTILITIES is the non-loop command list", () => {
   assert.deepEqual(UTILITIES, ["config"]);
+});
+
+test("AGENTS lists the explorer worker", () => {
+  assert.deepEqual(AGENTS, ["explorer"]);
+});
+
+test("engineTargets exposes agent templates and agent dirs per engine", () => {
+  const t = engineTargets("/home/x");
+  assert.equal(t.claude.agentTemplate, "shims/claude-agent.md");
+  assert.equal(t.codex.agentTemplate, "shims/codex-agent.toml");
+  assert.ok(t.claude.agentsDir.endsWith(path.join(".claude", "agents")));
+  assert.ok(t.codex.agentsDir.endsWith(path.join(".codex", "agents")));
 });
 
 function tmp() {
@@ -451,4 +468,131 @@ test("parseArgs gate flags do not leak into positionals", () => {
   const opts = parseArgs(["gate", "RAY-001", "review", "--verdict", "passed"]);
   assert.equal(opts.gate, "review");
   assert.equal(opts.verdict, "passed");
+});
+
+test("composeAgent renders a Claude agent: name/description, read-only tools, body", () => {
+  const header =
+    '---\nname: quark-{{AGENT}}\ndescription: "{{DESCRIPTION}}"\n{{ACCESS}}\n---\n\n# Quark {{AGENT}} — Claude Code\n\n{{BODY}}\n';
+  const out = composeAgent({
+    header,
+    engine: "claude",
+    agent: "explorer",
+    description: "Read-only explorer",
+    body: "Worker instructions here.",
+    readOnly: true,
+  });
+  assert.ok(out.includes("name: quark-explorer"), "agent name substituted");
+  assert.ok(out.includes('description: "Read-only explorer"'));
+  assert.ok(
+    out.includes('tools: ["Read", "Grep", "Glob"]'),
+    "read-only tools allowlist rendered as a JSON array",
+  );
+  assert.ok(!out.includes("Edit") && !out.includes("Agent tool"), "no write/dispatch tools");
+  assert.ok(out.includes("Worker instructions here."), "body substituted");
+  assert.ok(!out.includes("{{"), "no placeholders remain");
+});
+
+test("composeAgent renders a Codex agent: toml keys, read-only sandbox, instructions", () => {
+  const header =
+    'name = "quark-{{AGENT}}"\ndescription = "{{DESCRIPTION}}"\n{{ACCESS}}\ndeveloper_instructions = """\n{{BODY}}\n"""\n';
+  const out = composeAgent({
+    header,
+    engine: "codex",
+    agent: "explorer",
+    description: "Read-only explorer",
+    body: "Worker instructions here.",
+    readOnly: true,
+  });
+  assert.ok(out.includes('name = "quark-explorer"'));
+  assert.ok(out.includes('sandbox_mode = "read-only"'), "read-only sandbox rendered");
+  assert.ok(out.includes("developer_instructions"));
+  assert.ok(out.includes("Worker instructions here."));
+  assert.ok(!out.includes("{{"), "no placeholders remain");
+});
+
+test("parseAgentSpec splits frontmatter description/read_only from the body", () => {
+  const text =
+    '---\nname: explorer\ndescription: "Quark explorer"\nread_only: true\n---\n\nBody line one.\nBody line two.\n';
+  const { description, readOnly, body } = parseAgentSpec(text);
+  assert.equal(description, "Quark explorer");
+  assert.equal(readOnly, true);
+  assert.ok(body.startsWith("Body line one."), "body keeps content after frontmatter");
+  assert.ok(!body.includes("---"), "frontmatter fence stripped from body");
+});
+
+test("parseAgentSpec defaults read_only to false and throws without frontmatter", () => {
+  const { readOnly } = parseAgentSpec('---\nname: x\ndescription: "y"\n---\n\nB\n');
+  assert.equal(readOnly, false);
+  assert.throws(() => parseAgentSpec("no frontmatter here"), /frontmatter/);
+});
+
+test("installEngineAgents writes a Claude agent .md from the shared spec", () => {
+  const outDir = path.join(tmp(), "agents");
+  const shim = fs.readFileSync(path.join(repoRoot, "shims/claude-agent.md"), "utf8");
+  const written = installEngineAgents({
+    shimTemplate: shim,
+    engine: "claude",
+    outDir,
+    root: repoRoot,
+  });
+  assert.equal(written.length, 1);
+  const body = fs.readFileSync(path.join(outDir, "quark-explorer.md"), "utf8");
+  assert.ok(body.includes("name: quark-explorer"), "name rendered");
+  assert.ok(body.includes('tools: ["Read", "Grep", "Glob"]'), "read-only tools rendered");
+  assert.ok(body.includes("Relevant files"), "explorer body inlined");
+  assert.ok(!body.includes("{{"), "no placeholders remain");
+});
+
+test("installEngineAgents writes a Codex agent .toml", () => {
+  const outDir = path.join(tmp(), "agents");
+  const shim = fs.readFileSync(path.join(repoRoot, "shims/codex-agent.toml"), "utf8");
+  installEngineAgents({ shimTemplate: shim, engine: "codex", outDir, root: repoRoot });
+  const body = fs.readFileSync(path.join(outDir, "quark-explorer.toml"), "utf8");
+  assert.ok(body.includes('sandbox_mode = "read-only"'));
+  assert.ok(body.includes("developer_instructions"));
+  assert.ok(body.includes("Relevant files"), "explorer body inlined into instructions");
+});
+
+test("uninstallEngineAgents removes only the agent files it owns", () => {
+  const outDir = path.join(tmp(), "agents");
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(path.join(outDir, "quark-explorer.md"), "x");
+  fs.writeFileSync(path.join(outDir, "keep.md"), "keep");
+  const removed = uninstallEngineAgents({ engine: "claude", outDir, names: ["explorer"] });
+  assert.equal(removed.length, 1);
+  assert.ok(!fs.existsSync(path.join(outDir, "quark-explorer.md")));
+  assert.ok(fs.existsSync(path.join(outDir, "keep.md")), "non-quark untouched");
+});
+
+test("uninstallEngineAgents tolerates already-absent files", () => {
+  const outDir = path.join(tmp(), "agents");
+  fs.mkdirSync(outDir, { recursive: true });
+  assert.deepEqual(uninstallEngineAgents({ engine: "codex", outDir, names: ["explorer"] }), []);
+});
+
+test("install writes agent files into each engine's agents dir", () => {
+  const home = tmp();
+  const results = install({ engines: ["claude", "codex"], root: repoRoot, home });
+  assert.ok(fs.existsSync(path.join(home, ".claude", "agents", "quark-explorer.md")));
+  assert.ok(fs.existsSync(path.join(home, ".codex", "agents", "quark-explorer.toml")));
+  for (const r of results) assert.equal(r.agents, AGENTS.length, `${r.engine}: agent count`);
+  assert.equal(results[0].count, STEPS.length + UTILITIES.length);
+});
+
+test("uninstall removes the agent files install wrote", () => {
+  const home = tmp();
+  install({ engines: ["claude", "codex"], root: repoRoot, home });
+  const results = uninstall({ engines: ["claude", "codex"], home });
+  assert.ok(!fs.existsSync(path.join(home, ".claude", "agents", "quark-explorer.md")));
+  assert.ok(!fs.existsSync(path.join(home, ".codex", "agents", "quark-explorer.toml")));
+  for (const r of results) assert.equal(r.agents, AGENTS.length);
+});
+
+test("parseAgentSpec reads read_only robustly (casing + inline comment)", () => {
+  const ro = (v) =>
+    parseAgentSpec(`---\nname: x\ndescription: "y"\nread_only: ${v}\n---\n\nB\n`).readOnly;
+  assert.equal(ro("TRUE  # confine to reads"), true, "uppercase + inline comment");
+  assert.equal(ro("true"), true);
+  assert.equal(ro("false"), false);
+  assert.equal(ro("yes"), false, "only true counts as read-only");
 });

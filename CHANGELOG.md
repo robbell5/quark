@@ -5,6 +5,19 @@ All notable changes to Quark are documented in this file.
 The format is based on [Keep a Changelog][kac], and this project adheres to
 [Semantic Versioning][semver].
 
+## [0.10.0] - 2026-05-28
+
+### Added
+
+- **Read-only `explorer` sub-agent.** A worker authored once as shared Markdown
+  (`agents/explorer.md`) and composed per-engine by the installer into
+  `~/.claude/agents/quark-explorer.md` and `~/.codex/agents/quark-explorer.toml`.
+  The `frame`, `plan`, and `verify` steps can dispatch it to do context-isolated
+  reading and return a fixed-shape digest (relevant files, patterns, risks,
+  ruled-out, open-for-human), keeping the orchestrator's session clear of context
+  rot. Read-only and leaf-only; it never elicits. The code-writing build-unit
+  executor and parallel `build` dispatch remain deferred.
+
 ## [0.9.0] - 2026-05-28
 
 ### Added

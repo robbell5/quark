@@ -8,6 +8,9 @@ export const STEPS = ["frame", "plan", "review", "build", "verify", "ship"];
 /** Non-loop utility commands, generated from the reviewer-free config shims. */
 export const UTILITIES = ["config"];
 
+/** Sub-agent workers, composed per-engine from shared specs in `agents/`. */
+export const AGENTS = ["explorer"];
+
 /**
  * Resolve the Quark repo root from a module URL inside src/.
  * src/lib.mjs lives one level below the repo root.
@@ -15,6 +18,27 @@ export const UTILITIES = ["config"];
 export function resolveQuarkRoot(moduleUrl) {
   const here = path.dirname(fileURLToPath(moduleUrl));
   return path.resolve(here, "..");
+}
+
+/**
+ * Split an agent spec (`agents/<name>.md`) into { description, readOnly, body }.
+ * Frontmatter is a leading `---`-fenced block of flat `key: value` lines; the
+ * body is everything after it. A quoted description is unquoted. Throws when the
+ * frontmatter block is absent. Kept local (not reused from check.mjs) to avoid a
+ * lib<->check import cycle.
+ */
+export function parseAgentSpec(text) {
+  const norm = text.replace(/\r\n/g, "\n");
+  const m = norm.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  if (!m) throw new Error("agent spec missing frontmatter block");
+  const fm = {};
+  for (const line of m[1].split("\n")) {
+    const kv = line.match(/^([\w-]+):\s*(.*)$/);
+    if (kv) fm[kv[1]] = kv[2].trim();
+  }
+  const description = (fm.description ?? "").replace(/^["']|["']$/g, "");
+  const readOnly = (fm.read_only ?? "").split("#")[0].trim().toLowerCase() === "true";
+  return { description, readOnly, body: m[2].trim() };
 }
 
 /** Read all `<dir>/*.md` from the source root into a name→content map. */
@@ -89,14 +113,18 @@ export function engineTargets(home = os.homedir()) {
     claude: {
       loopTemplate: "shims/claude.md",
       configTemplate: "shims/claude-config.md",
+      agentTemplate: "shims/claude-agent.md",
       outDir: path.join(home, ".claude", "skills"),
+      agentsDir: path.join(home, ".claude", "agents"),
       sidecar: null,
       legacyDir: path.join(home, ".claude", "commands"),
     },
     codex: {
       loopTemplate: "shims/codex.md",
       configTemplate: "shims/codex-config.md",
+      agentTemplate: "shims/codex-agent.toml",
       outDir: path.join(home, ".agents", "skills"),
+      agentsDir: path.join(home, ".codex", "agents"),
       sidecar: { src: "shims/codex-openai.yaml", dest: "agents/openai.yaml" },
       legacyDir: path.join(home, ".codex", "prompts"),
     },
@@ -153,6 +181,79 @@ export function composeCommand({
   const examplesBlock = appendix("Examples", "examples", examples);
   if (examplesBlock) parts.push(examplesBlock);
   return parts.join("\n\n") + "\n";
+}
+
+/**
+ * Per-engine rendering of an agent's access level, keyed by read-only-ness.
+ * Read-only is the only level today (the explorer); the code-writing executor
+ * pass adds a `readWrite` entry per engine.
+ */
+const AGENT_ACCESS = {
+  claude: { readOnly: 'tools: ["Read", "Grep", "Glob"]' },
+  codex: { readOnly: 'sandbox_mode = "read-only"' },
+};
+
+/**
+ * Compose one self-contained agent definition for an engine. Pure: string
+ * substitution only. Substitutes {{AGENT}}, {{DESCRIPTION}}, {{ACCESS}} (the
+ * engine's access directive, from `readOnly`), and {{BODY}} (worker
+ * instructions). Returns the rendered file content.
+ */
+export function composeAgent({ header, engine, agent, description, body, readOnly }) {
+  const key = readOnly ? "readOnly" : "readWrite";
+  const access = AGENT_ACCESS[engine]?.[key] ?? "";
+  return (
+    header
+      .replaceAll("{{AGENT}}", agent)
+      .replaceAll("{{DESCRIPTION}}", description)
+      .replaceAll("{{ACCESS}}", access)
+      .replaceAll("{{BODY}}", body)
+      .trimEnd() + "\n"
+  );
+}
+
+/**
+ * Compose and write one self-contained agent file per name into outDir, as
+ * `<prefix><name>.<ext>` (`.md` for Claude, `.toml` for Codex). Reads each
+ * shared spec from `agents/<name>.md` under `root`. Idempotent: overwrites the
+ * files it owns. Returns the file paths written.
+ */
+export function installEngineAgents({
+  shimTemplate, engine, outDir, root, names = AGENTS, prefix = "quark-",
+}) {
+  fs.mkdirSync(outDir, { recursive: true });
+  const ext = engine === "codex" ? "toml" : "md";
+  const written = [];
+  for (const name of names) {
+    const spec = fs.readFileSync(path.join(root, `agents/${name}.md`), "utf8");
+    const { description, readOnly, body } = parseAgentSpec(spec);
+    const content = composeAgent({
+      header: shimTemplate, engine, agent: name, description, body, readOnly,
+    });
+    const file = path.join(outDir, `${prefix}${name}.${ext}`);
+    fs.writeFileSync(file, content);
+    written.push(file);
+  }
+  return written;
+}
+
+/**
+ * Remove the agent files Quark owns (`<prefix><name>.<ext>`) from outDir. Only
+ * deletes exact known names; never globs. Returns the paths removed.
+ */
+export function uninstallEngineAgents({
+  engine, outDir, names = AGENTS, prefix = "quark-",
+}) {
+  const ext = engine === "codex" ? "toml" : "md";
+  const removed = [];
+  for (const name of names) {
+    const file = path.join(outDir, `${prefix}${name}.${ext}`);
+    if (fs.existsSync(file)) {
+      fs.rmSync(file);
+      removed.push(file);
+    }
+  }
+  return removed;
 }
 
 /**
@@ -237,7 +338,7 @@ export function install({ engines, root, home = os.homedir() }) {
   const allNames = [...STEPS, ...UTILITIES];
   const results = [];
   for (const engine of engines) {
-    const { loopTemplate, configTemplate, outDir, sidecar, legacyDir } =
+    const { loopTemplate, configTemplate, agentTemplate, outDir, agentsDir, sidecar, legacyDir } =
       targets[engine];
     const loopHeader = fs.readFileSync(path.join(root, loopTemplate), "utf8");
     const configHeader = fs.readFileSync(
@@ -266,11 +367,16 @@ export function install({ engines, root, home = os.homedir() }) {
       includeShared: false,
       sidecar: resolvedSidecar,
     });
+    const agentShim = fs.readFileSync(path.join(root, agentTemplate), "utf8");
+    const agents = installEngineAgents({
+      shimTemplate: agentShim, engine, outDir: agentsDir, root,
+    });
     const legacy = sweepLegacy({ legacyDir, names: allNames });
     results.push({
       engine,
       outDir,
       count: loop.length + util.length,
+      agents: agents.length,
       legacyRemoved: legacy.length,
     });
   }
@@ -287,13 +393,15 @@ export function uninstall({ engines, home = os.homedir() }) {
   const names = [...STEPS, ...UTILITIES];
   const results = [];
   for (const engine of engines) {
-    const { outDir, legacyDir } = targets[engine];
+    const { outDir, agentsDir, legacyDir } = targets[engine];
     const removed = uninstallEngine({ outDir, names });
+    const agents = uninstallEngineAgents({ engine, outDir: agentsDir, names: AGENTS });
     const legacy = sweepLegacy({ legacyDir, names });
     results.push({
       engine,
       outDir,
       count: removed.length,
+      agents: agents.length,
       legacyRemoved: legacy.length,
     });
   }

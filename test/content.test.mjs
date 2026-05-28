@@ -374,3 +374,76 @@ test("templates and playbooks wire the acceptance-criterion spine", () => {
   assert.ok(/\(ACn\)/.test(read("playbook/plan.md")), "plan teaches (ACn)");
   assert.ok(/AC1:/.test(read("playbook/frame.md")), "frame assigns AC ids");
 });
+
+test("the explorer agent spec declares read-only and the return contract", () => {
+  const spec = read("agents/explorer.md");
+  assert.ok(/^read_only:\s*true$/m.test(spec), "explorer must declare read_only: true");
+  for (const sec of [
+    "Relevant files",
+    "Patterns to follow",
+    "Risks",
+    "Ruled out",
+    "Open for the human",
+  ]) {
+    assert.ok(spec.includes(sec), `explorer spec missing return-contract section "${sec}"`);
+  }
+  assert.ok(
+    /read-only/i.test(spec) && /leaf-only/i.test(spec) && /never elicit/i.test(spec),
+    "explorer must state its read-only / leaf-only / no-elicit constraints",
+  );
+});
+
+test("agent shims carry the compose placeholders and no engine cross-talk", () => {
+  const cc = read("shims/claude-agent.md");
+  assert.ok(cc.startsWith("---"), "claude agent shim opens with frontmatter");
+  assert.ok(cc.includes("name: quark-{{AGENT}}"));
+  assert.ok(
+    cc.includes("{{DESCRIPTION}}") && cc.includes("{{ACCESS}}") && cc.includes("{{BODY}}"),
+    "claude agent shim has all placeholders",
+  );
+  const cx = read("shims/codex-agent.toml");
+  assert.ok(cx.includes('name = "quark-{{AGENT}}"'));
+  assert.ok(
+    cx.includes("developer_instructions") && cx.includes("{{BODY}}") && cx.includes("{{ACCESS}}"),
+    "codex agent shim has all placeholders",
+  );
+});
+
+test("_shared teaches delegating to the read-only explorer worker", () => {
+  const shared = read("playbook/_shared.md");
+  assert.ok(/## Delegating to workers/.test(shared), "missing the delegation section");
+  assert.ok(/quark-explorer/.test(shared), "must name the explorer agent");
+  assert.ok(
+    /read-only/i.test(shared) && /leaf-only/i.test(shared),
+    "must state read-only / leaf-only",
+  );
+  assert.ok(/never elicit/i.test(shared), "must keep elicitation in the main session");
+  assert.ok(/parallel/i.test(shared), "must allow parallel independent dispatch");
+});
+
+test("frame, plan, and verify can delegate exploration to a worker", () => {
+  for (const step of ["frame", "plan", "verify"]) {
+    assert.ok(
+      /Delegating to workers|quark-explorer|explorer/.test(read(`playbook/${step}.md`)),
+      `${step} must reference worker delegation`,
+    );
+  }
+  assert.ok(
+    read("playbook/plan.md").includes("examples/explore-digest.md"),
+    "plan must anchor the digest few-shot example",
+  );
+});
+
+test("the explore-digest example exists with the contract sections", () => {
+  assert.ok(fs.existsSync(path.join(root, "examples/explore-digest.md")));
+  const d = read("examples/explore-digest.md");
+  for (const sec of [
+    "Relevant files",
+    "Patterns to follow",
+    "Risks",
+    "Ruled out",
+    "Open for the human",
+  ]) {
+    assert.ok(d.includes(sec), `explore-digest missing "${sec}"`);
+  }
+});

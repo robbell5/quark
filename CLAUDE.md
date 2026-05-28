@@ -17,7 +17,7 @@ style every step playbook follows.
 
 ## Status
 
-Active — v0.9.0. The harness is built, tested (`node --test`), and installable
+Active — v0.10.0. The harness is built, tested (`node --test`), and installable
 via `npx github:robbell5/quark install` (or `node bin/quark install` from a
 clone). It installs as **Agent Skills** on both engines —
 `~/.claude/skills/quark-*/` and `~/.agents/skills/quark-*/`, explicit-invocation
@@ -39,9 +39,11 @@ only. The product is the Markdown in `playbook/`; the installer is plumbing.
   composes each `SKILL.md` from the header plus `_shared.md`, the step body, and
   any referenced templates. `shims/claude-config.md`, `shims/codex-config.md`
   are the reviewer-free headers for the `config` utility.
-- `src/lib.mjs` — installer logic: `STEPS`, `UTILITIES`, `resolveQuarkRoot`,
-  `composeCommand`, `installEngine`, `uninstallEngine`, `sweepLegacy`,
-  `engineTargets`, `parseArgs`, `install`, `uninstall`.
+- `src/lib.mjs` — installer logic: `STEPS`, `UTILITIES`, `AGENTS`,
+  `resolveQuarkRoot`, `composeCommand`, `composeAgent`, `parseAgentSpec`,
+  `installEngine`, `installEngineAgents`, `uninstallEngine`,
+  `uninstallEngineAgents`, `sweepLegacy`, `engineTargets`, `parseArgs`,
+  `install`, `uninstall`.
 - `src/check.mjs` — the `quark check` validator: `SCHEMAS` contract,
   `REVIEW_VERDICTS`, `parseSections`, `parseFrontmatter`, `validateArtifact`,
   `parseAcIds`, `collectAcRefs`, `acCoverage` (the AC linkage spine), `planHash`,
@@ -55,6 +57,10 @@ only. The product is the Markdown in `playbook/`; the installer is plumbing.
 - `examples/` — filled worked-example artifacts (`context.md`, `plan.md`,
   `state.md`, `plan-too-vague.md` anti-example, plus `open-questions.md`,
   `review.md`, `uat.md`), inlined into the step skills as few-shot anchors.
+- `agents/` — shared sub-agent specs (`explorer.md`), composed per-engine like
+  skills. `shims/claude-agent.md` and `shims/codex-agent.toml` are the agent
+  header templates (`{{AGENT}}`/`{{DESCRIPTION}}`/`{{ACCESS}}`/`{{BODY}}`); the
+  installer composes them into `~/.claude/agents/` and `~/.codex/agents/`.
 - `test/` — `node:test` suites: `lib`, `content` (structural), `e2e`, `smoke`.
 - Each playbook in `playbook/` follows the **cold-start skeleton**: inputs →
   precondition gate (`quark check --for <step>`) → procedure → output schema →

@@ -23,7 +23,10 @@ Run `quark check <TICKET-ID> --for plan`. If it exits non-zero, STOP and report 
    list what you do *not* yet know. Settle each unknown from the code where you
    can. A build-critical unknown the code cannot settle is a blocking question:
    follow the **Eliciting decisions** guide in the Shared Conventions. Record
-   the rest as risks. Do not paper over an unknown.
+   the rest as risks. Do not paper over an unknown. If the change surface is
+   large, dispatch the read-only explorer worker to enumerate it (see
+   **Delegating to workers** in the Shared Conventions); its digest mirrors
+   `examples/explore-digest.md`. Write the plan from the digest.
 2. Write `.work/<TICKET-ID>/plan.md` from `templates/plan.md`:
    - a file-by-file list of changes (exact paths, what changes in each);
    - the test strategy — which behaviors get tests (cite the `(ACn)` each

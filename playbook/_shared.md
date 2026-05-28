@@ -92,6 +92,32 @@ required:
 - Genuinely blocking questions stop progress; everything else gets a proposed
   default and proceeds.
 
+## Delegating to workers
+
+A long step can fill its own session with file reads and tool output — the
+context rot the whole loop fights. To stay clear, dispatch the read-only
+`quark-explorer` worker to do bounded reading and hand back a digest; hold only
+the digest, never the worker's intermediate reads.
+
+When to dispatch:
+
+- Only when the surface is large enough to rot context — many files, an
+  unfamiliar module, a sizable diff. A small, single-file change is read inline.
+- Dispatch independent targets in parallel (one batch of calls), not serially.
+
+How to dispatch (your engine's native mechanism):
+
+- **Claude Code:** the `Agent` tool with `subagent_type: quark-explorer`.
+- **Codex:** an explicit request to run the `quark-explorer` agent.
+
+The explorer returns a fixed-shape digest — relevant files, patterns to follow,
+risks/surprises, ruled-out areas, and anything open for the human — then you
+write your artifact from it. Constraints baked into the worker: it is
+**read-only** and **leaf-only** (it never dispatches further workers), and it
+**never elicits** — a worker cannot prompt the developer, so all questions stay
+in this (the main) session. Surface a worker's "Open for the human" items here
+and decide whether to ask.
+
 ## Principles (apply in every step)
 
 - **One step per session.** Each step is a cold start; when one finishes, the

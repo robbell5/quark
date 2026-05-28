@@ -24,7 +24,10 @@ None — `frame` is the entry step.
 1. Determine `<TICKET-ID>`: the tracker id (e.g. `RAY-123`), or a short kebab
    slug derived from the description if there is no ticket.
 2. Create `.work/<TICKET-ID>/` if it does not exist.
-3. Read the steering doc and the code in play before writing anything.
+3. Read the steering doc and the code in play before writing anything. If the
+   area is large or unfamiliar, dispatch the read-only explorer worker to map it
+   (see **Delegating to workers** in the Shared Conventions) and write
+   `context.md` from its digest; keep developer questions in this session.
 4. Write `.work/<TICKET-ID>/context.md` from `templates/context.md`, filling
    intent, acceptance criteria, the specific files/modules in play, constraints,
    risks, and explicit out-of-scope items. Give each acceptance criterion a

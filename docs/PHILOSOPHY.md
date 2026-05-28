@@ -48,6 +48,10 @@ fills. Quark fights it with a fresh session per step and a file-based handoff
 the baton the next step reads. The session boundary *is* the context-isolation
 mechanism.
 
+Within a long step, the same principle applies: dispatch a read-only worker for
+bounded reading and keep only its digest, so the orchestrator's own session does
+not rot. (See the explorer sub-agent.)
+
 ## One loop, two engines — usable with either alone
 
 The same loop runs natively on Claude Code and Codex. The developer can switch

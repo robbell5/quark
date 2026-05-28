@@ -1,0 +1,6 @@
+name = "quark-{{AGENT}}"
+description = "{{DESCRIPTION}}"
+{{ACCESS}}
+developer_instructions = """
+{{BODY}}
+"""

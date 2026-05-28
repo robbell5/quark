@@ -6,7 +6,7 @@ ambiguity before any code is written — confirm scope, close open questions,
 and produce a reliable, reviewed plan — then execute that plan faithfully,
 confirm acceptance criteria, strip the ephemeral planning docs, and open a PR.
 
-Status: active — v0.9.0. Installable and dogfooded.
+Status: active — v0.10.0. Installable and dogfooded.
 
 ## Why Quark
 
