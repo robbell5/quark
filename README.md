@@ -8,20 +8,21 @@ confirm acceptance criteria, strip the ephemeral planning docs, and open a PR.
 
 Status: active — v0.9.0. Installable and dogfooded.
 
-## Layout
+## Why Quark
 
-- `playbook/` — the six loop steps plus `config.md` and `_shared.md` (the
-  product).
-- `shims/` — per-engine `SKILL.md` headers: loop (`claude.md`, `codex.md`) and
-  config (`claude-config.md`, `codex-config.md`), plus `codex-openai.yaml` (the
-  Codex explicit-only sidecar).
-- `src/lib.mjs` — the zero-dependency installer; `src/check.mjs` holds the
-  `quark check` validator (`SCHEMAS` contract + check functions).
-- `bin/quark` — the CLI entry (`install`, `uninstall`, `check` subcommands).
-- `templates/` — `.work/<TICKET>/` artifact skeletons.
-- `examples/` — filled worked-example artifacts, inlined into the step skills
-  as few-shot anchors.
-- `test/` — `node:test` suites.
+- **Context rot is the enemy.** Output quality decays as a context window fills.
+  Each step runs in a *fresh session* and hands off through files, so every step
+  wakes clean.
+- **Planning docs are ephemeral.** Artifacts live in `.work/<TICKET>/`, are
+  gitignored, and are stripped before the PR. Your tracker stays the source of
+  truth — not in-repo spec files.
+- **One loop, two engines.** The same steps run natively on Claude Code and
+  Codex; switch engines mid-ticket without losing context. Either engine alone
+  is enough.
+- **Self-owned.** Zero runtime dependencies; each installed skill is
+  self-contained. No external harness that can be abandoned or compromised.
+
+See [`docs/PHILOSOPHY.md`](docs/PHILOSOPHY.md) for the full reasoning.
 
 ## Requirements
 
@@ -57,18 +58,6 @@ Pin a version with a git ref, e.g. `npx github:robbell5/quark#v0.4.0 install`.
 From a local clone the same commands are `node bin/quark install` /
 `node bin/quark uninstall`.
 
-## Publishing to npm (later)
-
-Quark installs straight from GitHub today. Publishing to npm later needs no code
-changes — only packaging metadata:
-
-1. Remove `"private": true` from `package.json`.
-2. Set `"name"` to an available scoped name, e.g. `@robbell5/quark`.
-3. `npm publish --access public`.
-
-The `files` allowlist already scopes the published tarball. Once published,
-`npx @robbell5/quark install` works exactly like the GitHub form.
-
 ## Configure a repo
 
 Inside a repo you want to use Quark in, run `/quark-config` (Claude Code) or
@@ -92,20 +81,37 @@ files. Running several steps in one session still works (each step re-reads the
 files), it just spends context you did not need to. Switch engines any time —
 `state.md` is the handoff.
 
+Each step reads the previous step's artifact, does its job, and writes the next.
+A `quark check <ticket> --for <step>` gate runs first (and `quark check` again as
+a self-check at the end), so a step refuses to start from — or finish with — a
+malformed artifact.
+
+- **frame** — Turn a ticket into a scoped `context.md`: intent, acceptance
+  criteria (each with a stable `ACn` id), the files in play, sensitivity, and
+  open questions. Blocking questions are resolved here before any planning.
+- **plan** — Turn `context.md` into a reviewable `plan.md`: a file-by-file list
+  of changes, a test strategy, and a definition-of-done that covers every
+  acceptance criterion. This is the human review gate.
+- **review** — A fresh, skeptical reader critiques the plan, writing actionable
+  gaps and a verdict to `review.md`. The loop runs `plan ⇄ review` until the plan
+  is clean (or you consciously accept the remaining gaps).
+- **build** — Implement `plan.md` faithfully in small commits, keeping
+  `state.md` current so the other engine could resume cold from it.
+- **verify** — Prove each acceptance criterion with real evidence: run the
+  repo's gates, replay a UAT walkthrough (`uat.md`), and run a security pass when
+  the slice is sensitive.
+- **ship** — Strip the ephemeral `.work/` scratch and open a draft PR whose body
+  summarizes the change and its verification evidence, pointing back to the
+  tracker.
+
 **Resume.** Forgotten where a ticket stands? Run `quark check <TICKET>`: it
 prints the `state.md` baton (current step, status, driver, updated, next
 action) and validates the artifacts. Then open a fresh session and run the
 next step.
 
-Planning artifacts live in `.work/<TICKET>/` and are stripped before the PR.
-Each step also runs `quark check <ticket> --for <step>` as a precondition gate
-and `quark check <ticket>` as a self-check, so a step refuses to start from a
-malformed upstream artifact.
+## Contributing
 
-## Development
+Hacking on Quark itself — repo layout, running the tests, publishing — lives in
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-Run `node --test` for the full suite. Zero runtime dependencies. MIT licensed.
-
-Editing any `playbook/*.md`, `templates/*.md`, shim, or `shims/codex-openai.yaml`
-requires re-running the installer (`node bin/quark install`) to regenerate the
-self-contained skill files.
+License: MIT.
